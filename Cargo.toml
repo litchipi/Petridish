@@ -1,0 +1,15 @@
+[package]
+name = "genalgo_engine"
+version = "0.1.0"
+authors = ["John <john@sparta>"]
+edition = "2018"
+
+[lib]
+name = "genalgo_engine"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.13.0"
+serde = {version = "1.0.118", features = ["derive"]}
+serde_json = "1.0"
+log = "0.4.11"
