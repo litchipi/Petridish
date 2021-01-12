@@ -61,7 +61,7 @@ impl GenalgoEngine {
         // TODO Stop algo execution (pause thread)
     }
 
-    fn get_algo_status(&mut self, id:AlgoID) -> JsonData{
+    fn get_algo_status(&mut self, id:AlgoID) -> JsonData{       //TODO Return a PyDict object
         serde_json::to_string(&(self.get_algo(id).expect("Cannot find algo").status)).expect("Cannot deserialize Algo Status into JSON")
     }
 
