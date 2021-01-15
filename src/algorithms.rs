@@ -23,10 +23,24 @@ impl AllCellsTypes{
             AllCellsTypes::None => panic!("Attempt to unwrap None cell")
         }
     }
+
+    pub fn unwrap_mut(&mut self) -> &mut impl Cell{
+        match self{
+            AllCellsTypes::TestAlgoCell(c) => c,
+            AllCellsTypes::None => panic!("Attempt to unwrap None cell")
+        }
+    }
 }
 
 impl AlgoAvailable{
     pub fn unwrap(&self) -> &impl Algo{
+        match self{
+            AlgoAvailable::TestAlgo(t) => t,
+            AlgoAvailable::None => panic!("Attempt to unwrap None algo")
+        }
+    }
+
+    pub fn unwrap_mut(&mut self) -> &mut impl Algo{
         match self{
             AlgoAvailable::TestAlgo(t) => t,
             AlgoAvailable::None => panic!("Attempt to unwrap None algo")

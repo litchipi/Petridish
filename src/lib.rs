@@ -8,7 +8,6 @@ use pyo3::wrap_pyfunction;
 mod genalgo_lab;
 mod algorithms;
 
-
 /*          API             */
 
 #[pyfunction]

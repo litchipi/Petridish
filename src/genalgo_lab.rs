@@ -1,4 +1,5 @@
 pub mod genalgo;
+pub mod genalgomethods;
 extern crate serde;
 extern crate pyo3;
 
@@ -48,7 +49,13 @@ impl GenalgoEngine {
         let id = self.generate_new_id();
         self.algos.insert(id, genalgo::Genalgo::create_algo(name));
         self.create_algo_thread(id);
+        self.nb_algos += 1;
         id
+    }
+
+    fn remove_algo(&mut self, id: AlgoID){
+        // TODO Remove algorithm
+        self.nb_algos -= 1;
     }
 
 

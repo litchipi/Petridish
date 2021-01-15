@@ -3,7 +3,7 @@
 set -e
 
 ADD_TAGS="IMPORTANT BUG"
-results=$(grep -rn "TODO"|grep -v binaire|grep -v "venv"|grep -v "data")
+results=$(grep -rn "TODO"|grep -v binaire|grep -v "venv"|grep -v "data/")
 
 display_results(){
     echo "[*] Tagged as $1"|grep --color $1
