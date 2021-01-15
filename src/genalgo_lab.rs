@@ -16,7 +16,7 @@ pub type ThreadID = u64;
 #[pyclass]
 pub struct GenalgoEngine {
     #[pyo3(get)]
-    nb_algos: i32,
+    nb_algos: u32,
     algos: HashMap<AlgoID, genalgo::Genalgo>,
     algoid_counter: AlgoID
 }
@@ -55,7 +55,7 @@ impl GenalgoEngine {
 
     fn remove_algo(&mut self, id: AlgoID){
         // TODO Remove algorithm
-        self.nb_algos -= 1;
+        self.nb_algos -= if self.nb_algos >= 1 {1} else {0};
     }
 
 

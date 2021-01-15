@@ -37,6 +37,9 @@ impl BenchmarkAlgo{
 }
 
 impl Algo for BenchmarkAlgo{
+    fn recv_special_data(&mut self, data: &serde_json::Value){
+
+    }
 
     fn get_genome_length(&self) -> usize{
         self.fct_dimension as usize

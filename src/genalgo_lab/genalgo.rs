@@ -42,11 +42,10 @@ pub (crate) trait GenalgoMethod{
 }
 
 pub trait Algo{
-//    type AlgoType;
-//    type CellType;
     fn genome_from_json(&self, jsdata: JsonData) -> Genome;
     fn genome_to_json(&self, genome: Genome) -> JsonData;
     fn data_from_json(&self, jsdata: JsonData, vec: Vec<f64>);
+    fn recv_special_data(&mut self, data: &serde_json::Value);
     fn create_cell_from_genome(&self, genome: &Genome) -> algorithms::AllCellsTypes;
     fn get_genome_length(&self) -> usize;
     fn check_generation_over(&self, genalgo: &Genalgo) -> bool;
@@ -199,17 +198,23 @@ impl Genalgo {
         self.algo.unwrap().genome_to_json(self.bestgen.clone())
     }
 
-    pub fn receive_data(&mut self, jsdata: JsonData) -> bool {
+    pub fn receive_data(&mut self, data: serde_json::Value) -> bool {
         if self.databuff.len() >= (self.config.databuffer_max_length as usize){
             false
         }else{
-            let data: serde_json::Value = serde_json::from_str(jsdata.as_str()).expect("Error while parsing json");
+            //let data: serde_json::Value = serde_json::from_str(jsdata.as_str()).expect("Error while parsing json");
+            if data.get("algo_special_data") != Option::None {
+                self.algo.unwrap_mut().recv_special_data(&data["algo_special_data"]);
+            }
+
             if data.get("dataset_nb") != Option::None {
                 self.vardata.current_dataset_nb = data["dataset_nb"].as_u64().expect("Cannot load value from dataset_nb parameter") as u8;
             }
+
             if data.get("dataset_total") != Option::None {
                 self.settings.nb_datasets = data["dataset_total"].as_u64().expect("Cannot load value from dataset_total parameter") as u8;
             }
+
             if data.get("data") != Option::None {
                 let mut vec: GenalgoData = vec![];
                 let data_array = data["data"].as_array().unwrap();

@@ -7,6 +7,7 @@ use pyo3::wrap_pyfunction;
 
 mod genalgo_lab;
 mod algorithms;
+mod utils;
 
 /*          API             */
 
@@ -19,11 +20,4 @@ fn create_engine() -> genalgo_lab::GenalgoEngine {
 fn genalgo(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(create_engine, m)?).unwrap();
     Ok(())
-}
-
-/*              TESTS               */
-
-#[test]
-fn it_works() {
-    assert_eq!(2 + 2, 4);
 }

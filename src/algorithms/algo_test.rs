@@ -14,6 +14,11 @@ pub struct TestCell{
 }
 
 impl Algo for TestAlgo{
+
+    fn recv_special_data(&mut self, data: &serde_json::Value){
+
+    }
+
     fn get_genome_length(&self) -> usize{
         2
     }
