@@ -42,8 +42,8 @@ pub (crate) trait GenalgoMethod{
 }
 
 pub trait Algo{
-    type AlgoType;
-    type CellType;
+//    type AlgoType;
+//    type CellType;
     fn genome_from_json(&self, jsdata: JsonData) -> Genome;
     fn genome_to_json(&self, genome: Genome) -> JsonData;
     fn data_from_json(&self, jsdata: JsonData, vec: Vec<f64>);

@@ -14,8 +14,6 @@ pub struct TestCell{
 }
 
 impl Algo for TestAlgo{
-    type AlgoType = TestAlgo;
-    type CellType = TestCell;
     fn get_genome_length(&self) -> usize{
         2
     }
