@@ -1,4 +1,4 @@
-use crate::genalgo_lab::genalgo::{Algo, Cell};
+use crate::genalgo::{Algo, Cell};
 pub mod algo_test;
 pub mod benchmark_fcts;
 
@@ -62,6 +62,7 @@ impl AlgoAvailable{
 pub fn get_algo(name: &str) -> AlgoAvailable {
     match name {
         "algo_test" => AlgoAvailable::TestAlgo(algo_test::TestAlgo {}),
+        //TODO init benchmark algo with a null math function (throws error if not setup before)
         "benchmark" => AlgoAvailable::BenchmarkAlgo(benchmark_fcts::BenchmarkAlgo::new(benchmark_fcts::get_fct_by_name("spherical"), 8)),
         _ => panic!("No such algo name implemented")
     }

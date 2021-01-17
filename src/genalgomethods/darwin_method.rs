@@ -1,34 +1,60 @@
 use rand::prelude::*;
-use crate::genalgo_lab::genalgo::*;
+use rand_distr::Normal;
+
+use crate::utils::{MeanComputeVec, StddevComputeVec};
+use crate::genalgo::*;
 use crate::algorithms::AlgoAvailable;
-use crate::genalgo_lab::genalgomethods;
+use crate::genalgomethods;
 
 use serde::{Serialize, Deserialize};
+use std::cmp;
 
 pub (crate) fn new_darwin_method() -> DarwinMethod{
     DarwinMethod::new()
 }
 
-
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub (crate) struct DarwinMethodConfiguration{
     percent_elite: f64,
     variation_elite_pct: f64,
-    gene_reroll_proba: f64
+    gene_reroll_proba: f64,
+    optimization_ratio_epoch_shift: u32
 }
 
 pub (crate) fn darwin_default_config() -> DarwinMethodConfiguration{
     DarwinMethodConfiguration {
-        percent_elite: 0.1,
+        percent_elite: 0.01,
         variation_elite_pct: 0.25,
-        gene_reroll_proba: 0.33
+        gene_reroll_proba: 0.5,
+        optimization_ratio_epoch_shift: 3
     }
 }
 
 pub (crate) fn new_darwin_method_settings() -> DarwinMethodSettings{
-    DarwinMethodSettings { nb_elites: 0, nb_cells: 0 }
+    DarwinMethodSettings { nb_elites: 0, nb_cells: 0}
 }
 
+
+fn normal_random_vec(moy_vec: &Genome, stdev: &Genome, rng: &mut ThreadRng) -> Genome{
+    let mut res = Genome::new();
+    assert_eq!(moy_vec.len(), stdev.len());
+    for n in 0..moy_vec.len(){
+        res.push({
+            assert_ne!(stdev[n], f64::NAN);
+            let mut nb = Normal::new(moy_vec[n], stdev[n]).unwrap().sample(rng);
+            while nb >= 1.0{
+                nb -= stdev[n];
+            }
+            while nb <= 0.0{
+                nb += stdev[n];
+            }
+            nb
+        });
+        assert!(res[n] >= 0.0);
+        assert!(res[n] <= 1.0);
+    }
+    res
+}
 
 enum BreedingMethod{
     ScoreBasedAverage,
@@ -51,20 +77,19 @@ impl DarwinMethodSettings{
     }
 }
 
-
-impl DarwinMethodSettings{
-    fn load(&self, cfg: &GenalgoConfiguration, set: &GenalgoSettings){
-
-    }
-}
-
-
 pub (crate) struct DarwinMethod{
+    epoch_last_new_best: u32,
+    best_cell: CellData,
     config: DarwinMethodConfiguration,
     settings: DarwinMethodSettings,
 }
 
 impl GenalgoMethod for DarwinMethod{
+    fn reset(&mut self){
+        self.best_cell = CellData { genome: Genome::new(), score: 0.0 };
+        self.epoch_last_new_best = 0;
+    }
+
     fn load_config(&mut self, cfg: &GenalgoConfiguration, set: &GenalgoSettings){
         self.config = match cfg.genalgo_method_config {
             genalgomethods::GenalgoMethodsConfigurations::DarwinConfig(c) => c,
@@ -74,7 +99,8 @@ impl GenalgoMethod for DarwinMethod{
         self.settings.from(cfg, set);
     }
 
-    fn init_method(&mut self, bestgen: &Genome, algo: &AlgoAvailable) -> Vec<Genome>{
+    fn init_method(&mut self, bestcell: &CellData, algo: &AlgoAvailable) -> Vec<Genome>{
+        let bestgen = bestcell.genome.clone();
         if bestgen.len() == 0 {
             self.__init_generate_random_population(algo)
         } else if bestgen.len() < algo.unwrap().get_genome_length() {
@@ -85,52 +111,82 @@ impl GenalgoMethod for DarwinMethod{
         }
     }
 
-    fn process_results(&self, cells: Vec<&CellData>, var: &GenalgoVardata, algo: &AlgoAvailable) -> Vec<Genome>{
+    fn process_results(&mut self, maximize: bool, cells: Vec<&CellData>, var: &GenalgoVardata, algo: &AlgoAvailable) -> Vec<Genome>{
         let mut rng = rand::thread_rng();
-        let optimization_ratio: f64 = rng.gen();
-        let mut genomes: Vec<Genome> = vec![];
 
+        if cells[0].score != self.best_cell.score{
+            self.best_cell = cells[0].clone();
+            self.epoch_last_new_best = 0;
+        }else{
+            self.epoch_last_new_best += 1;
+        }
+
+        let optimization_ratio: f64 = {
+            let rgen : f64 = rng.gen();
+            let res = (1.0 + self.epoch_last_new_best as f64) / ((1 + self.config.optimization_ratio_epoch_shift + self.epoch_last_new_best) as f64);
+            assert!(res.is_finite());
+            rgen*res
+        };
+        let mut genomes: Vec<Genome> = vec![];
+        let mut mean_elite = MeanComputeVec::new(cells[0].genome.len());
+
+
+        genomes.push(cells[0].genome.clone());
         for i in 0..self.settings.nb_elites{
-            genomes.push(cells[i as usize].genome.clone());
+            mean_elite.add_el(
+                &cells[i as usize].genome,
+                if maximize { cells[i as usize].score } else { cells.last().unwrap().score - cells[i as usize].score }
+                );
+        }
+
+        let mut std_elite  = StddevComputeVec::new(mean_elite.result.clone());
+        for i in 0..self.settings.nb_elites{
+            std_elite.add_el(&cells[i as usize].genome);
         }
 
         let parts_size = self.__compute_population_parts_sizes(optimization_ratio);
-
+        assert_eq!(parts_size.iter().sum::<u32>(), self.settings.nb_cells-1);
+        //println!("{:?} {}", parts_size, self.settings.nb_cells);
         self.__generate_elite_childs(&cells, parts_size[0], &mut genomes, optimization_ratio, &mut rng);
         self.__generate_elite_mutations(&cells, parts_size[1], &mut genomes, optimization_ratio, &mut rng);
         self.__generate_random_elite_childs(&cells, parts_size[2], &mut genomes, optimization_ratio, &mut rng);
         self.__generate_random_pop_childs(&cells, parts_size[3], &mut genomes, optimization_ratio, &mut rng);
-        self.__generate_random_cells(algo, parts_size[4], &mut genomes, &mut rng);
+        self.__generate_norm_random_cells(parts_size[4], &mean_elite.result, &std_elite.result, &mut genomes, &mut rng);
+        self.__generate_random_cells(algo, parts_size[5], &mut genomes, &mut rng);
 
         genomes
-    }
-
-    fn sort_before_process(&self) -> bool{
-        true
     }
 }
 
 impl DarwinMethod{
     fn new() -> DarwinMethod{
         DarwinMethod {
-        config: darwin_default_config(),
-        settings: new_darwin_method_settings()
+            best_cell: CellData { genome: Genome::new(), score: 0.0 },
+            epoch_last_new_best : 0,
+            config: darwin_default_config(),
+            settings: new_darwin_method_settings()
         }
     }
 
+
+
     fn __compute_population_parts_sizes(&self, opt_ratio: f64) -> Vec<u32>{
-        let pop = self.settings.nb_cells - self.settings.nb_elites;
+        let pop = self.settings.nb_cells - 1;
+        
+        let opti_part = ((pop as f64)*(0.25 + (opt_ratio*0.5))) as u32;
+
+        // OPTIMISATION PURPOSE
         let elite_childs = self.settings.nb_elites-1;
+        let elite_mutated = (f64::from(opti_part-elite_childs)*0.5) as u32;
+        let random_elite_child = opti_part-elite_childs-elite_mutated;
 
-        let elite_mult = 1.0+((opt_ratio-0.5)*2.0);
-        let elite_mutated = ((self.settings.nb_elites as f64)*elite_mult) as u32;
-        let random_elite_child = ((self.settings.nb_elites as f64)*elite_mult) as u32;
+        // SWEEPING PURPOSE
+        let sweep_part = pop-opti_part;
+        let random_childs = ((sweep_part as f64)*0.25) as u32;
+        let random_cells_norm = (((sweep_part-random_childs) as f64)*0.7) as u32;
+        let random_cells = pop - opti_part - random_childs - random_cells_norm;
+        vec![elite_childs, elite_mutated, random_elite_child, random_childs, random_cells_norm, random_cells]
 
-        let random_childs= ((pop as f64)*0.3) as u32;
-
-        let random_cells = pop - (elite_childs + elite_mutated + random_elite_child + random_childs);
-
-        vec![elite_childs, elite_mutated, random_elite_child, random_childs, random_cells]
     }
 
     fn __init_generate_population_from_bestgen(&mut self, bestgen: Genome, algo: &AlgoAvailable) -> Vec<Genome>{
@@ -253,6 +309,12 @@ impl DarwinMethod{
             size, genvec, 1.0-opt_ratio, rng, BreedingMethod::ScoreBasedChoose);
     }
 
+    fn __generate_norm_random_cells(&self, size: u32, mean_elites: &Genome, stddev_elites: &Genome, genvec: &mut Vec<Genome>, rng: &mut ThreadRng){
+        for i in 0..size{
+            genvec.push(normal_random_vec(mean_elites, &stddev_elites, rng));
+        }
+    }
+
     fn __generate_random_cells(&self, algo: &AlgoAvailable, size: u32, genvec: &mut Vec<Genome>, rng: &mut ThreadRng){
         let genomelen = algo.unwrap().get_genome_length();
         for i in 0..size{
@@ -341,4 +403,11 @@ fn test_mutation_genome_direct(){
     }
 }
 
-
+#[test]
+fn test_normal_random_distrib(){
+    for i in 0..1000{
+        let res = normal_random_vec(&vec![0.5, 0.5], &vec![0.5, 0.5], &mut rand::thread_rng());
+        println!("{:?}", res);
+    }
+    assert!(true);
+}

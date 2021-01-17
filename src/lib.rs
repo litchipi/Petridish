@@ -5,19 +5,20 @@ extern crate pyo3;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-mod genalgo_lab;
+mod genalgomethods;
+mod genalgo;
 mod algorithms;
 mod utils;
 
 /*          API             */
 
 #[pyfunction]
-fn create_engine() -> genalgo_lab::GenalgoEngine {
-    genalgo_lab::GenalgoEngine::new()
+fn create(name: &str) -> genalgo::Genalgo {
+    genalgo::Genalgo::create_algo(name)
 }
 
 #[pymodule]
 fn genalgo(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(create_engine, m)?).unwrap();
+    m.add_function(wrap_pyfunction!(create, m)?).unwrap();
     Ok(())
 }

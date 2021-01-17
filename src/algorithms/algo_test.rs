@@ -1,8 +1,7 @@
 use std::mem;
 use crate::algorithms::AllCellsTypes;
-use crate::genalgo_lab::genalgo::*;
-use crate::genalgo_lab::JsonData;
-
+use crate::genalgo::*;
+use crate::utils::JsonData;
 const KEY_LIST: [&str; 2] = ["parameter1", "parameter2"];
 
 pub struct TestAlgo{
@@ -14,6 +13,14 @@ pub struct TestCell{
 }
 
 impl Algo for TestAlgo{
+
+    fn reset(&mut self){
+
+    }
+
+    fn send_special_data(&self, params: &serde_json::Value) -> JsonData{
+        String::from("")
+    }
 
     fn recv_special_data(&mut self, data: &serde_json::Value){
 
@@ -47,6 +54,20 @@ impl Algo for TestAlgo{
 
     fn get_cell_size(&self) -> usize {
         mem::size_of::<TestCell>()
+    }
+
+
+    fn initialize_cells(&mut self, pop: &mut Vec<AllCellsTypes>){
+
+    }
+
+    fn perform_action_on_data(&mut self, pop: &mut Vec<AllCellsTypes>, data: &GenalgoData){
+        for cell in pop.iter_mut(){
+            if let AllCellsTypes::TestAlgoCell(c) = cell {
+                c.action(&data)
+            }
+            cell.unwrap_mut().action(&data);
+        }
     }
 }
 

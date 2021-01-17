@@ -1,4 +1,4 @@
-use crate::genalgo_lab::genalgo::GenalgoMethod;
+use crate::genalgo::GenalgoMethod;
 use serde::{Serialize, Deserialize};
 
 mod darwin_method;
