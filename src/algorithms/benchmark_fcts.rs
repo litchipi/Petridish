@@ -1,54 +1,67 @@
 use std::cell::RefCell;
 use std::mem;
 
+use rand::prelude::*;
+
 use crate::algorithms::AllCellsTypes;
 use crate::genalgo::*;
 use crate::utils::{JsonData, format_error};
-use serde_json::*;
+use serde_json::{from_str, Value, to_string, json};
 
 type FctScope = (i64, i64);
 
 #[derive(Copy, Clone)]
 pub enum BenchmarkFct{
-    Spherical(SphericalFct)
+    Nofct,
+    Spherical(SphericalFct),
+    XinSheYang1(XinSheYang1Fct),
+    XinSheYang2(XinSheYang2Fct),
 }
 
 impl BenchmarkFct{
     fn calc(&mut self, data: &Genome) -> f64 {
         match self {
             BenchmarkFct::Spherical(f) => f.calc(data),
+            BenchmarkFct::XinSheYang1(f) => f.calc(data),
+            BenchmarkFct::XinSheYang2(f) => f.calc(data),
+            _ => panic!("Function not set or recognized"),
         }
     }
 
     fn get_expected_optimum(&self, ndim: u8, scope: FctScope) -> Vec<f64>{
         match self {
-            BenchmarkFct::Spherical(f) => {
-                let mut res = vec![];
-                for i in 0..ndim{
-                    res.push(coordinates_to_gene(scope, 0.0));
-                };
-                res
-            },
+            BenchmarkFct::Spherical(f) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
+            BenchmarkFct::XinSheYang1(f) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
+            BenchmarkFct::XinSheYang2(f) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
+            _ => panic!("Function not set or recognized"),
         }
     }
 
     fn get_minimum(&self) -> f64{
         match self {
-            BenchmarkFct::Spherical(f) => 0.0
+            BenchmarkFct::Spherical(f) => 0.0,
+            BenchmarkFct::XinSheYang1(f) => 0.0,
+            BenchmarkFct::XinSheYang2(f) => 0.0,
+            _ => panic!("Function not set or recognized"),
         }
     }
 
     fn set_scope(&mut self, scope: FctScope){
         match self {
-            BenchmarkFct::Spherical(f) => f.set_scope(scope)
+            BenchmarkFct::Spherical(f) => f.set_scope(scope),
+            BenchmarkFct::XinSheYang1(f) => f.set_scope(scope),
+            BenchmarkFct::XinSheYang2(f) => f.set_scope(scope),
+            _ => panic!("Function not set or recognized"),
         }
     }
 }
 
-pub fn get_fct_by_name(name: &str) -> BenchmarkFct{
+pub fn get_fct_by_name(name: &str) -> Result<BenchmarkFct, &'static str>{
     match name{
-        "spherical" => BenchmarkFct::Spherical(SphericalFct::new()),
-        _ => panic!("Benchmark function not found")
+        "spherical" => Ok(BenchmarkFct::Spherical(SphericalFct::new())),
+        "xinsheyang1" => Ok(BenchmarkFct::XinSheYang1(XinSheYang1Fct::new())),
+        "xinsheyang2" => Ok(BenchmarkFct::XinSheYang2(XinSheYang2Fct::new())),
+        _ => Err("Benchmark function not found")
     }
 }
 
@@ -70,21 +83,21 @@ impl BenchmarkCell{
 
 impl BenchmarkAlgo{
     //TODO init with null function (to be configured after)
-    pub fn new(fct: BenchmarkFct, fct_dimension: u8) -> BenchmarkAlgo{
+    pub fn new() -> BenchmarkAlgo{ //fct: BenchmarkFct, fct_dimension: u8) -> BenchmarkAlgo{
         BenchmarkAlgo {
-            fct_dimension: fct_dimension,
-            math_fct: fct
+            fct_dimension: 0, //fct_dimension,
+            math_fct: BenchmarkFct::Nofct //fct
         }
     }
 
     fn __get_expected_optimum(&self, params: &serde_json::Value) -> JsonData{
-        if (params.get("scope_min") == Option::None) || (params.get("scope_max") == Option::None){
-            format_error("Please specify scope_min and scope_max fields", "BSDExO1", json!({}))
+        if params.get("scope") == Option::None{ //) || (params.get("scope_max") == Option::None){
+            format_error("Please specify scope field", "BSDExO1", json!({}))
         }else{
             serde_json::to_string(&json!({
                 "result":self.math_fct.get_expected_optimum(self.fct_dimension, (
-                        params["scope_min"].as_i64().expect("Cannot convert scope_min as i64"),
-                        params["scope_max"].as_i64().expect("Cannot convert scope_max as i64")
+                        params["scope"][0].as_i64().expect("Cannot convert scope min as i64"),
+                        params["scope"][1].as_i64().expect("Cannot convert scope max as i64")
                         ))
             })).expect("Cannot convert results to JSON string")
         }
@@ -107,10 +120,17 @@ impl Algo for BenchmarkAlgo{
         }
     }
 
-    //TODO change math function and dimension
     fn recv_special_data(&mut self, data: &serde_json::Value){
         if data.get("scope") != Option::None{
             self.math_fct.set_scope((data["scope"][0].as_i64().expect("Unable to load scope value 0"), data["scope"][1].as_i64().expect("Unable to load scope value 1")));
+        }
+
+        if data.get("mathfct") != Option::None{
+            self.math_fct = get_fct_by_name(data["mathfct"].as_str().unwrap()).unwrap();
+        }
+
+        if data.get("nb_dimensions") != Option::None{
+            self.fct_dimension = data["nb_dimensions"].as_u64().unwrap() as u8;
         }
     }
 
@@ -146,6 +166,9 @@ impl Algo for BenchmarkAlgo{
     }
 
     fn initialize_cells(&mut self, pop: &mut Vec<AllCellsTypes>){
+        if let BenchmarkFct::Nofct = self.math_fct {
+            panic!("No math function was set up before initialisation");
+        }
         for cell in pop.iter_mut(){
             if let AllCellsTypes::BenchmarkAlgoCell(c) = cell {
                 c.set_math_fct(self.math_fct);
@@ -212,6 +235,64 @@ impl MathFct for SphericalFct{
     }
 }
 
+
+
+// XinSheYang function n°1
+#[derive(Copy, Clone)]
+pub struct XinSheYang1Fct {scope: FctScope}
+impl XinSheYang1Fct{
+    fn new() -> XinSheYang1Fct{
+        XinSheYang1Fct { scope : (-5, 5) }
+    }
+}
+impl MathFct for XinSheYang1Fct{
+    fn set_scope(&mut self, scope: FctScope){
+        self.scope = scope;
+    }
+
+    fn calc(&self, inputs: &Genome) -> f64{
+        let mut rng = rand::thread_rng();
+        let res1: f64 = inputs.into_iter().map(|x| self.__gen_random(&mut rng)*coordinates_from_gene(self.scope, *x).abs().powf(inputs.len() as f64)).collect::<Vec<f64>>().iter().sum();
+        let res2: f64 = inputs.into_iter().map(|x| self.__gen_random(&mut rng)*coordinates_from_gene(self.scope, *x).abs().powf(inputs.len() as f64)).collect::<Vec<f64>>().iter().sum();
+        (res1+res2)/2.0
+    }
+}
+
+impl XinSheYang1Fct{
+    fn __gen_random(&self, rng: &mut ThreadRng) -> f64{
+        rng.gen()
+    }
+}
+
+
+// XinSheYang function n°2
+#[derive(Copy, Clone)]
+pub struct XinSheYang2Fct {scope: FctScope}
+impl XinSheYang2Fct{
+    fn new() -> XinSheYang2Fct{
+        XinSheYang2Fct { scope : (-5, 5) }
+    }
+}
+impl MathFct for XinSheYang2Fct{
+    fn set_scope(&mut self, scope: FctScope){
+        self.scope = scope;
+    }
+
+    fn calc(&self, inputs: &Genome) -> f64{
+        inputs.into_iter().map(|x| coordinates_from_gene(self.scope, *x).abs()).sum::<f64>() * (0.0 - inputs.into_iter().map(|x| (coordinates_from_gene(self.scope, *x).powf(2.0)).sin()).sum::<f64>()).exp()
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
 #[test]
 fn test_coordinate_transformation(){
     assert_eq!(coordinates_from_gene((-10, 10), 1.0), 10.0);
@@ -220,9 +301,47 @@ fn test_coordinate_transformation(){
 }
 
 #[test]
+fn test_xinsheyang2_benchmarking_fct(){
+    let mut fct = match get_fct_by_name("xinsheyang2").unwrap() {
+        BenchmarkFct::XinSheYang2(s) => s,
+        _ => panic!("Expected XinSheYang2 function, got another one")
+    };
+
+    assert_eq!(fct.scope.0, -5);
+    assert_eq!(fct.scope.1, 5);
+    fct.set_scope((-10, 10));
+    assert_eq!(fct.scope.0, -10);
+    assert_eq!(fct.scope.1, 10);
+
+    assert_eq!(fct.calc(&vec![0.5, 0.5]), 0.0);
+    assert_eq!(fct.calc(&vec![1.0, 1.0]), fct.calc(&vec![0.0, 1.0]));
+}
+
+
+#[test]
+fn test_xinsheyang1_benchmarking_fct(){
+    let mut fct = match get_fct_by_name("xinsheyang1").unwrap() {
+        BenchmarkFct::XinSheYang1(s) => s,
+        _ => panic!("Expected XinSheYang1 function, got another one")
+    };
+
+    assert_eq!(fct.scope.0, -5);
+    assert_eq!(fct.scope.1, 5);
+    fct.set_scope((-10, 10));
+    assert_eq!(fct.scope.0, -10);
+    assert_eq!(fct.scope.1, 10);
+
+    for i in 0..100{
+        assert_eq!(fct.calc(&vec![0.5, 0.5]), 0.0);
+        assert_ne!(fct.calc(&vec![0.0, 0.0]), fct.calc(&vec![0.0, 0.0]));
+    }
+}
+
+#[test]
 fn test_spherical_benchmarking_fct(){
-    let mut fct = match get_fct_by_name("spherical") {
+    let mut fct = match get_fct_by_name("spherical").unwrap() {
         BenchmarkFct::Spherical(s) => s,
+        _ => panic!("Expected Sperical function, got another one")
     };
     assert_eq!(fct.scope.0, -5);
     assert_eq!(fct.scope.1, 5);

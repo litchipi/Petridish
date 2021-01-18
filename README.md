@@ -18,7 +18,9 @@ Made to have fun, experiment and learn ! :-)
 
 ### Implemented BboB functions
 - [Spheric function](http://benchmarkfcns.xyz/benchmarkfcns/spherefcn.html)
-
+- [Xin-She Yang 1 function](http://benchmarkfcns.xyz/benchmarkfcns/xinsheyangn1fcn.html)
+**Note:** *As this function gets a part of randomness, I cheated and made a mean of 2 values at calculation time to allow the optimisation to converge faster*
+- [Xin-She Yang 2 function](http://benchmarkfcns.xyz/benchmarkfcns/xinsheyangn2fcn.html)
 
 ### Implemented Algorithms
 - AlgoTest (Dummy)
