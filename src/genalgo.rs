@@ -5,8 +5,6 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 
 use rand::prelude::*;
-use pyo3::prelude::*;
-use pyo3::wrap_pyfunction;
 
 use crate::algorithms;
 use crate::genalgomethods;
@@ -14,7 +12,6 @@ use crate::utils::{MeanCompute, JsonData};
 use log::{info, trace, warn};
 
 extern crate serde;
-extern crate pyo3;
 use serde::{Serialize, Deserialize};
 
 pub type Genome = Vec<f64>;
@@ -135,12 +132,9 @@ impl GenalgoSettings{
     }
 }
 
-#[pyclass]
 pub struct Genalgo {
     /*          PUBLIC              */
-    #[pyo3(get)]
     pub init: bool,
-    #[pyo3(get)]
     pub epoch: u64,
     pub bestcell: CellData,
     pub avgtime: MeanCompute,
@@ -260,8 +254,6 @@ impl Genalgo {
     }
 }
 
-
-#[pymethods]
 impl Genalgo {
     /*              API             */
     pub fn get_avg_process_time(&self) -> f64{
