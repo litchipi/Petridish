@@ -1,16 +1,9 @@
-# RustPetridish
-Genetic Algorithm library meant to be used inside a Python code, written in Rust.
+# Petridish
+Genetic Algorithm library, written in Rust.
 Project made to learn Rust langage in depth and have fun, didn't expect it to work.
+Following objectives are to implement Black Box Optimisation Benchmark (BbOB) functions to test each optimisation method and improve them.
 
-
-Following objectives are to implement Black Box Optimisation Benchmark (BbOB) functions to test each optimisation method and improve them, also to provide API to be able to tweak the algorithm behaviours from Python easily.
-
-
-If you want to play with it, build it using cargo, copy file generated at target/\<release or debug\>/libgenalgo.so to where the test script is, and import it with Python as you would import any Python file.
-
-
-Made to have fun, experiment and learn ! :-)
-
+Intended to be used as a Rust library with limited API on Python as the pyo3 library restrict the capabilities.
 
 ### Implemented Optimisation methods
 - **Darwin** (Mix of technics, including CMA on elites and natural selection. Name chosen by myself)
