@@ -3,10 +3,11 @@ use std::time::Instant;
 use std::cmp;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::mem;
 
 use rand::prelude::*;
 
-use crate::algorithms;
+use crate::builtin_algos;
 use crate::genalgomethods;
 use crate::utils::{MeanCompute, JsonData};
 use log::{info, trace, warn};
@@ -40,25 +41,22 @@ pub fn __genome_to_json(genome: Genome, key_list: &Vec<&str>) -> JsonData{
     serde_json::to_string(&result).expect("Cannot serialize genome to Json")
 }
 
-pub (crate) trait GenalgoMethod{
-    fn load_config(&mut self, cfg: &GenalgoConfiguration, set: &GenalgoSettings);
-    fn init_method(&mut self, bestcell: &CellData, algo: &algorithms::AlgoAvailable) -> Vec<Genome>;
-    fn process_results(&mut self, maximize: bool, cells: Vec<&CellData>, var: &GenalgoVardata, algo: &algorithms::AlgoAvailable) -> Vec<Genome>;
-    fn reset(&mut self);
-}
-
 pub trait Algo{
+    type CellType : Cell;
+    fn new() -> Self where Self : Sized;
+    
     fn genome_from_json(&self, jsdata: JsonData) -> Genome;
     fn genome_to_json(&self, genome: Genome) -> JsonData;
-    fn data_from_json(&self, jsdata: JsonData, vec: Vec<f64>);
+    fn get_genome_length(&self) -> usize;
+    
+    fn initialize_cells(&mut self, pop: &mut Vec<Self::CellType>);
+    fn create_cell_from_genome(&self, genome: &Genome) -> Self::CellType;
+
     fn recv_special_data(&mut self, data: &serde_json::Value);
     fn send_special_data(&self, params: &serde_json::Value) -> JsonData;
-    fn create_cell_from_genome(&self, genome: &Genome) -> algorithms::AllCellsTypes;
-    fn get_genome_length(&self) -> usize;
-    fn check_generation_over(&self, genalgo: &Genalgo) -> bool;
-    fn get_cell_size(&self) -> usize;
-    fn initialize_cells(&mut self, pop: &mut Vec<algorithms::AllCellsTypes>);
-    fn perform_action_on_data(&mut self, pop: &mut Vec<algorithms::AllCellsTypes>, data: &GenalgoData);
+
+    fn process_data(&mut self, pop: &mut Vec<Self::CellType>, data: &GenalgoData);
+    fn check_generation_over(&self, genalgo: &Genalgo<Self::CellType>) -> bool;
     fn reset(&mut self);
 }
 
@@ -132,7 +130,7 @@ impl GenalgoSettings{
     }
 }
 
-pub struct Genalgo {
+pub struct Genalgo<T: Cell> {
     /*          PUBLIC              */
     pub init: bool,
     pub epoch: u64,
@@ -140,23 +138,22 @@ pub struct Genalgo {
     pub avgtime: MeanCompute,
 
     /*          PRIVATE             */
-    algo: algorithms::AlgoAvailable,
+    algo: Box<dyn Algo<CellType = T>>,
     pub (crate) config: GenalgoConfiguration,
     pub (crate) settings: GenalgoSettings,
-    pub (crate) ga_method: genalgomethods::AllGenalgoMethod,
+    pub (crate) ga_method: Box<dyn genalgomethods::GenalgoMethod<T>>,
 
     /*          VARIABLES           */
-    pub (crate) population: Vec<algorithms::AllCellsTypes>,
+    pub (crate) population: Vec<T>,
     pub (crate) vardata: GenalgoVardata,
     pub (crate) databuff: VecDeque<GenalgoData>
 }
 
 
-impl Genalgo {
-    pub fn create_algo(name: &str) -> Genalgo{
-        let algo = algorithms::get_algo(name);
+impl<T: 'static + Cell> Genalgo<T> {
+    pub fn create_algo(algo: Box<dyn Algo<CellType = T>>) -> Genalgo<T>{
         let config = GenalgoConfiguration::default();
-        let settings = GenalgoSettings::from_config(&config, algo.unwrap().get_cell_size());
+        let settings = GenalgoSettings::from_config(&config, Genalgo::<T>::get_cell_size());
         let vardata = GenalgoVardata::from(&config, &settings);
         let method = genalgomethods::get_method(config.genalgo_method);
 
@@ -174,6 +171,10 @@ impl Genalgo {
             databuff: VecDeque::new()
         }
     }
+    
+    fn get_cell_size() -> usize{
+        mem::size_of::<T>()
+    }
 
     fn reset_algo(&mut self){
         self.epoch = 0;
@@ -181,14 +182,14 @@ impl Genalgo {
         self.bestcell = CellData {genome: vec![], score: 0.0};
         self.population = vec![];
         self.databuff = VecDeque::new();
-        self.algo.unwrap_mut().reset();
-        self.ga_method.unwrap().reset();
+        self.algo.reset();
+        self.ga_method.reset();
 
     }
 
     fn setup_configuration(&mut self, cfg: GenalgoConfiguration){
         self.config = cfg;
-        self.settings = GenalgoSettings::from_config(&self.config, self.algo.unwrap().get_cell_size());
+        self.settings = GenalgoSettings::from_config(&self.config, Genalgo::<T>::get_cell_size());
         if !self.init{
             self.vardata = GenalgoVardata::from(&self.config, &self.settings);
         }
@@ -200,7 +201,7 @@ impl Genalgo {
         }else{
             //let data: serde_json::Value = serde_json::from_str(jsdata.as_str()).expect("Error while parsing json");
             if data.get("algo_special_data") != Option::None {
-                self.algo.unwrap_mut().recv_special_data(&data["algo_special_data"]);
+                self.algo.recv_special_data(&data["algo_special_data"]);
             }
 
             if data.get("data") != Option::None {
@@ -238,23 +239,22 @@ impl Genalgo {
     /*          POPULATION MANIPULATION     */
     fn __sort_cells(&mut self){
         if self.config.maximize_score{
-            self.population.sort_by(|a, b| b.unwrap().get_data().score.partial_cmp(&a.unwrap().get_data().score).unwrap());
+            self.population.sort_by(|a, b| b.get_data().score.partial_cmp(&a.get_data().score).unwrap());
         }else{
-            self.population.sort_by(|a, b| a.unwrap().get_data().score.partial_cmp(&b.unwrap().get_data().score).unwrap());
+            self.population.sort_by(|a, b| a.get_data().score.partial_cmp(&b.get_data().score).unwrap());
         }
-        self.bestcell = (*self.population[0].unwrap().get_data()).clone();
+        self.bestcell = (*self.population[0].get_data()).clone();
     }
 
     fn generate_cells(&mut self, genomes: Vec<Genome>){
         self.population = vec![];
-        let algo = self.algo.unwrap();
         for g in genomes.iter(){
-            self.population.push(algo.create_cell_from_genome(g));
+            self.population.push(self.algo.create_cell_from_genome(g));
         }
     }
 }
 
-impl Genalgo {
+impl<T: 'static + Cell> Genalgo<T> {
     /*              API             */
     pub fn get_avg_process_time(&self) -> f64{
         self.avgtime.result
@@ -279,10 +279,10 @@ impl Genalgo {
         if self.init{
             self.reset_algo();
         }
-        self.ga_method.unwrap().load_config(&self.config, &self.settings);
-        let genomes = self.ga_method.unwrap().init_method(&self.bestcell, &self.algo);
+        self.ga_method.load_config(&self.config, &self.settings);
+        let genomes = self.ga_method.init_method(&self.bestcell, &self.algo);
         self.generate_cells(genomes);
-        self.algo.unwrap_mut().initialize_cells(&mut self.population);
+        self.algo.initialize_cells(&mut self.population);
         self.init = true;
     }
 
@@ -293,9 +293,9 @@ impl Genalgo {
         for i in 0..self.databuff.len(){
             let data = self.databuff.pop_front().unwrap();
             let now = Instant::now();
-            self.algo.unwrap_mut().perform_action_on_data(&mut self.population, &data);
+            self.algo.process_data(&mut self.population, &data);
             self.avgtime.add_el(now.elapsed().as_secs_f64(), 1.0);
-            if self.algo.unwrap().check_generation_over(&self){
+            if self.algo.check_generation_over(&self){
                 return true;
             }
         }
@@ -307,18 +307,18 @@ impl Genalgo {
         let celldatarefs : Vec<&CellData> = {
             let mut res = vec![];
             for cell in self.population.iter(){
-                res.push(cell.unwrap().get_data())
+                res.push(cell.get_data())
             }
             res
         };
-        let genomes = self.ga_method.unwrap().process_results(self.config.maximize_score, celldatarefs, &self.vardata, &self.algo);
+        let genomes = self.ga_method.process_results(self.config.maximize_score, celldatarefs, &self.vardata, &self.algo);
         self.generate_cells(genomes);
         self.epoch += 1;
         self.epoch
     }
 
     pub fn load_bestgen_from_json(&mut self, jsdata: JsonData){
-        self.bestcell.genome = self.algo.unwrap().genome_from_json(jsdata);
+        self.bestcell.genome = self.algo.genome_from_json(jsdata);
     }
 
     pub fn save_bestcell_to_json(&self) -> JsonData {

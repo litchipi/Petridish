@@ -3,15 +3,11 @@ use rand_distr::Normal;
 
 use crate::utils::{MeanComputeVec, StddevComputeVec};
 use crate::genalgo::*;
-use crate::algorithms::AlgoAvailable;
 use crate::genalgomethods;
 
 use serde::{Serialize, Deserialize};
 use std::cmp;
-
-pub (crate) fn new_darwin_method() -> DarwinMethod{
-    DarwinMethod::new()
-}
+use std::marker::PhantomData;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub (crate) struct DarwinMethodConfiguration{
@@ -77,14 +73,25 @@ impl DarwinMethodSettings{
     }
 }
 
-pub (crate) struct DarwinMethod{
+pub (crate) struct DarwinMethod<T: Cell>{
     epoch_last_new_best: u32,
     best_cell: CellData,
     config: DarwinMethodConfiguration,
     settings: DarwinMethodSettings,
+    _phantom: PhantomData<T>,
 }
 
-impl GenalgoMethod for DarwinMethod{
+impl<T: Cell> genalgomethods::GenalgoMethod<T> for DarwinMethod<T>{
+    fn new() -> Self where Self : Sized{
+        DarwinMethod {
+            best_cell: CellData { genome: Genome::new(), score: 0.0 },
+            epoch_last_new_best : 0,
+            config: darwin_default_config(),
+            settings: new_darwin_method_settings(),
+            _phantom: PhantomData,
+        }
+    }
+
     fn reset(&mut self){
         self.best_cell = CellData { genome: Genome::new(), score: 0.0 };
         self.epoch_last_new_best = 0;
@@ -99,11 +106,11 @@ impl GenalgoMethod for DarwinMethod{
         self.settings.from(cfg, set);
     }
 
-    fn init_method(&mut self, bestcell: &CellData, algo: &AlgoAvailable) -> Vec<Genome>{
+    fn init_method(&mut self, bestcell: &CellData, algo: &Box<dyn Algo<CellType = T>>) -> Vec<Genome>{
         let bestgen = bestcell.genome.clone();
         if bestgen.len() == 0 {
             self.__init_generate_random_population(algo)
-        } else if bestgen.len() < algo.unwrap().get_genome_length() {
+        } else if bestgen.len() < algo.get_genome_length() {
             //trace!("Best genome length < expected genome length, skipping");
             self.__init_generate_random_population(algo)
         } else {
@@ -111,7 +118,8 @@ impl GenalgoMethod for DarwinMethod{
         }
     }
 
-    fn process_results(&mut self, maximize: bool, cells: Vec<&CellData>, var: &GenalgoVardata, algo: &AlgoAvailable) -> Vec<Genome>{
+    //TODO IMPORTANT Propagate cells last results through generations (test with xinsheyang1 function)
+    fn process_results(&mut self, maximize: bool, cells: Vec<&CellData>, var: &GenalgoVardata, algo: &Box<dyn Algo<CellType = T>>) -> Vec<Genome>{
         let mut rng = rand::thread_rng();
 
         if cells[0].score != self.best_cell.score{
@@ -158,18 +166,7 @@ impl GenalgoMethod for DarwinMethod{
     }
 }
 
-impl DarwinMethod{
-    fn new() -> DarwinMethod{
-        DarwinMethod {
-            best_cell: CellData { genome: Genome::new(), score: 0.0 },
-            epoch_last_new_best : 0,
-            config: darwin_default_config(),
-            settings: new_darwin_method_settings()
-        }
-    }
-
-
-
+impl<T: Cell> DarwinMethod<T>{
     fn __compute_population_parts_sizes(&self, opt_ratio: f64) -> Vec<u32>{
         let pop = self.settings.nb_cells - 1;
         
@@ -189,7 +186,7 @@ impl DarwinMethod{
 
     }
 
-    fn __init_generate_population_from_bestgen(&mut self, bestgen: Genome, algo: &AlgoAvailable) -> Vec<Genome>{
+    fn __init_generate_population_from_bestgen(&mut self, bestgen: Genome, algo: &Box<dyn Algo<CellType = T>>) -> Vec<Genome>{
         let mut genomes: Vec<Genome> = vec![];
 
         genomes.push(bestgen.clone());
@@ -207,7 +204,7 @@ impl DarwinMethod{
         genomes
     }
 
-    fn __init_generate_random_population(&mut self, algo: &AlgoAvailable) -> Vec<Genome>{
+    fn __init_generate_random_population(&mut self, algo: &Box<dyn Algo<CellType = T>>) -> Vec<Genome>{
         let mut genomes: Vec<Genome> = vec![];
         for i in 0..self.settings.nb_cells{
             genomes.push(self.random_genome(algo));
@@ -242,9 +239,9 @@ impl DarwinMethod{
         }
     }
 
-    fn random_genome(&self, algo: &AlgoAvailable) -> Genome {
+    fn random_genome(&self, algo: &Box<dyn Algo<CellType = T>>) -> Genome {
         let mut rng = rand::thread_rng();
-        self.__random_genome(&mut rng, algo.unwrap().get_genome_length())
+        self.__random_genome(&mut rng, algo.get_genome_length())
     }
 
     fn __random_genome(&self, rng: &mut ThreadRng, len: usize) -> Genome {
@@ -315,8 +312,8 @@ impl DarwinMethod{
         }
     }
 
-    fn __generate_random_cells(&self, algo: &AlgoAvailable, size: u32, genvec: &mut Vec<Genome>, rng: &mut ThreadRng){
-        let genomelen = algo.unwrap().get_genome_length();
+    fn __generate_random_cells(&self, algo: &Box<dyn Algo<CellType = T>>, size: u32, genvec: &mut Vec<Genome>, rng: &mut ThreadRng){
+        let genomelen = algo.get_genome_length();
         for i in 0..size{
             genvec.push(self.__random_genome(rng, genomelen));
         }
@@ -339,7 +336,7 @@ fn test_random_genome_generation(){
     let algo = algorithms::get_algo("algo_test");
     let genome_a = a.random_genome(&algo);
     let genome_b = a.random_genome(&algo);
-    assert_eq!(genome_a.len(), algo.unwrap().get_genome_length());
+    assert_eq!(genome_a.len(), algo.get_genome_length());
     assert_eq!(genome_b.len(), genome_a.len());
     println!("{:?}", genome_a);
     println!("{:?}", genome_b);
@@ -364,7 +361,7 @@ fn test_mutation_genome(){
             tmp
         };
 
-        assert_eq!(genome_a.len(), algo.unwrap().get_genome_length());
+        assert_eq!(genome_a.len(), algo.get_genome_length());
         println!("{:?}", genome_a);
         println!("{:?}", genome_b);
         for i in 0..genome_a.len(){
@@ -394,7 +391,7 @@ fn test_mutation_genome_direct(){
             tmp
         };
 
-        assert_eq!(genome_a.len(), algo.unwrap().get_genome_length());
+        assert_eq!(genome_a.len(), algo.get_genome_length());
 
         println!("{:?}", genome_b);
         for i in 0..genome_a.len(){

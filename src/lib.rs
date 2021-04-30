@@ -3,5 +3,5 @@
 
 mod genalgomethods;
 mod genalgo;
-mod algorithms;
+mod builtin_algos;
 mod utils;

@@ -1,18 +1,19 @@
 use std::mem;
-use crate::algorithms::AllCellsTypes;
 use crate::genalgo::*;
 use crate::utils::JsonData;
 const KEY_LIST: [&str; 2] = ["parameter1", "parameter2"];
 
+#[derive(Clone)]
 pub struct TestAlgo{
 
 }
 
-pub struct TestCell{
-    celldata: CellData,
-}
-
 impl Algo for TestAlgo{
+    type CellType = TestCell;
+
+    fn new() -> Self where Self: Sized{
+        TestAlgo { }
+    }
 
     fn reset(&mut self){
 
@@ -38,37 +39,30 @@ impl Algo for TestAlgo{
         __genome_to_json(genome, &KEY_LIST.to_vec())
     }
 
-    fn data_from_json(&self, jsdata: JsonData, vec: Vec<f64>){
-
-    }
-
-    fn create_cell_from_genome(&self, genome: &Genome) -> AllCellsTypes{
-        AllCellsTypes::TestAlgoCell(TestCell {
+    fn create_cell_from_genome(&self, genome: &Genome) -> Self::CellType{
+        TestCell {
             celldata: CellData { genome: genome.clone(), score: 0.0},
-        })
+        }
     }
 
-    fn check_generation_over(&self, genalgo: &Genalgo) -> bool{
+    fn check_generation_over(&self, genalgo: &Genalgo<TestCell>) -> bool{
         false
     }
 
-    fn get_cell_size(&self) -> usize {
-        mem::size_of::<TestCell>()
-    }
-
-
-    fn initialize_cells(&mut self, pop: &mut Vec<AllCellsTypes>){
+    fn initialize_cells(&mut self, pop: &mut Vec<Self::CellType>){
 
     }
 
-    fn perform_action_on_data(&mut self, pop: &mut Vec<AllCellsTypes>, data: &GenalgoData){
+    fn process_data(&mut self, pop: &mut Vec<Self::CellType>, data: &GenalgoData){
         for cell in pop.iter_mut(){
-            if let AllCellsTypes::TestAlgoCell(c) = cell {
-                c.action(&data)
-            }
-            cell.unwrap_mut().action(&data);
+            cell.action(&data);
         }
     }
+}
+
+#[derive(Clone)]
+pub struct TestCell{
+    celldata: CellData,
 }
 
 impl Cell for TestCell{

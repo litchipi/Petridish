@@ -3,7 +3,6 @@ use std::mem;
 
 use rand::prelude::*;
 
-use crate::algorithms::AllCellsTypes;
 use crate::genalgo::*;
 use crate::utils::{JsonData, format_error};
 use serde_json::{from_str, Value, to_string, json};
@@ -65,11 +64,13 @@ pub fn get_fct_by_name(name: &str) -> Result<BenchmarkFct, &'static str>{
     }
 }
 
+#[derive(Clone)]
 pub struct BenchmarkAlgo{
     math_fct: BenchmarkFct,
     fct_dimension: u8
 }
 
+#[derive(Clone)]
 pub struct BenchmarkCell{
     celldata: CellData,
     math_fct: RefCell<BenchmarkFct>
@@ -82,14 +83,6 @@ impl BenchmarkCell{
 }
 
 impl BenchmarkAlgo{
-    //TODO init with null function (to be configured after)
-    pub fn new() -> BenchmarkAlgo{ //fct: BenchmarkFct, fct_dimension: u8) -> BenchmarkAlgo{
-        BenchmarkAlgo {
-            fct_dimension: 0, //fct_dimension,
-            math_fct: BenchmarkFct::Nofct //fct
-        }
-    }
-
     fn __get_expected_optimum(&self, params: &serde_json::Value) -> JsonData{
         if params.get("scope") == Option::None{ //) || (params.get("scope_max") == Option::None){
             format_error("Please specify scope field", "BSDExO1", json!({}))
@@ -106,6 +99,16 @@ impl BenchmarkAlgo{
 }
 
 impl Algo for BenchmarkAlgo{
+    type CellType = BenchmarkCell;
+    
+    //TODO init with null function (to be configured after)
+    fn new() -> Self where Self : Sized {
+        BenchmarkAlgo {
+            fct_dimension: 0, //fct_dimension,
+            math_fct: BenchmarkFct::Nofct //fct
+        }
+    }
+
     fn reset(&mut self){
 
     }
@@ -146,41 +149,29 @@ impl Algo for BenchmarkAlgo{
         serde_json::to_string(&genome).unwrap()
     }
 
-    fn data_from_json(&self, jsdata: JsonData, vec: Vec<f64>){
-
-    }
-
-    fn create_cell_from_genome(&self, genome: &Genome) -> AllCellsTypes{
-        AllCellsTypes::BenchmarkAlgoCell(BenchmarkCell {
+    fn create_cell_from_genome(&self, genome: &Genome) -> Self::CellType{
+        BenchmarkCell {
             celldata: CellData { genome: genome.clone(), score: 0.0},
             math_fct: RefCell::new(self.math_fct)
-        })
+        }
     }
 
-    fn check_generation_over(&self, genalgo: &Genalgo) -> bool{
+    fn check_generation_over(&self, genalgo: &Genalgo<BenchmarkCell>) -> bool{
         true
     }
 
-    fn get_cell_size(&self) -> usize {
-        mem::size_of::<BenchmarkCell>()
-    }
-
-    fn initialize_cells(&mut self, pop: &mut Vec<AllCellsTypes>){
+    fn initialize_cells(&mut self, pop: &mut Vec<Self::CellType>){
         if let BenchmarkFct::Nofct = self.math_fct {
             panic!("No math function was set up before initialisation");
         }
         for cell in pop.iter_mut(){
-            if let AllCellsTypes::BenchmarkAlgoCell(c) = cell {
-                c.set_math_fct(self.math_fct);
-            }
+            cell.set_math_fct(self.math_fct);
         }
     }
 
-    fn perform_action_on_data(&mut self, pop: &mut Vec<AllCellsTypes>, data: &GenalgoData){
+    fn process_data(&mut self, pop: &mut Vec<Self::CellType>, data: &GenalgoData){
         for cell in pop.iter_mut(){
-            if let AllCellsTypes::BenchmarkAlgoCell(c) = cell {
-                c.action(&data)
-            }
+            cell.action(&data)
         }
     }
 }
@@ -208,8 +199,8 @@ trait MathFct{
 
 /*              BENCHMARKING FUNCTIONS              */
 //TODO Add more benchmarking functions
-fn coordinates_to_gene(scope: FctScope, gene: f64) -> f64{
-    0.5 //TODO Coordinates to gene calculation
+fn coordinates_to_gene(scope: FctScope, coordinate: f64) -> f64{
+    coordinate/((scope.1 - scope.0) as f64)
 }
 
 fn coordinates_from_gene(scope: FctScope, gene: f64) -> f64{
@@ -252,9 +243,11 @@ impl MathFct for XinSheYang1Fct{
 
     fn calc(&self, inputs: &Genome) -> f64{
         let mut rng = rand::thread_rng();
-        let res1: f64 = inputs.into_iter().map(|x| self.__gen_random(&mut rng)*coordinates_from_gene(self.scope, *x).abs().powf(inputs.len() as f64)).collect::<Vec<f64>>().iter().sum();
-        let res2: f64 = inputs.into_iter().map(|x| self.__gen_random(&mut rng)*coordinates_from_gene(self.scope, *x).abs().powf(inputs.len() as f64)).collect::<Vec<f64>>().iter().sum();
-        (res1+res2)/2.0
+        let mut res: f64 = 0.0;
+        for (n, x) in inputs.iter().enumerate(){
+            res += self.__gen_random(&mut rng)*coordinates_from_gene(self.scope, *x).abs().powf(n as f64)
+        }
+        res
     }
 }
 
