@@ -1,5 +1,8 @@
 use std::mem;
-use crate::genalgo::*;
+
+use crate::lab::*;
+use crate::dataset::GenalgoData;
+use crate::genalgo::Genalgo;
 use crate::utils::JsonData;
 const KEY_LIST: [&str; 2] = ["parameter1", "parameter2"];
 
@@ -71,5 +74,9 @@ impl Cell for TestCell{
     }
 
     fn action(&mut self, data: &GenalgoData){
+    }
+
+    fn reset(&mut self, genome: &Genome){
+        self.celldata.genome = genome.clone();
     }
 }

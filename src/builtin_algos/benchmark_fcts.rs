@@ -3,7 +3,9 @@ use std::mem;
 
 use rand::prelude::*;
 
-use crate::genalgo::*;
+use crate::lab::*;
+use crate::genalgo::Genalgo;
+use crate::dataset::GenalgoData;
 use crate::utils::{JsonData, format_error};
 use serde_json::{from_str, Value, to_string, json};
 
@@ -184,6 +186,10 @@ impl Cell for BenchmarkCell{
     fn action(&mut self, data: &GenalgoData){
         let mut f = self.math_fct.borrow_mut();
         self.celldata.score = (f.get_minimum() - f.calc(&self.celldata.genome)).abs();
+    }
+    
+    fn reset(&mut self, genome: &Genome){
+        self.celldata.genome = genome.clone();
     }
 }
 

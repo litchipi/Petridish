@@ -1,4 +1,5 @@
-use crate::genalgo::*;
+use crate::errors::Errcode;
+use crate::lab::*;
 use serde::{Serialize, Deserialize};
 
 mod darwin_method;
@@ -6,10 +7,12 @@ mod darwin_method;
 
 pub (crate) trait GenalgoMethod<T: Cell>{
     fn new() -> Self where Self: Sized;
-    fn load_config(&mut self, cfg: &GenalgoConfiguration, set: &GenalgoSettings);
-    fn init_method(&mut self, bestcell: &CellData, algo: &Box<dyn Algo<CellType = T>>) -> Vec<Genome>;
-    fn process_results(&mut self, maximize: bool, cells: Vec<&CellData>, var: &GenalgoVardata, algo: &Box<dyn Algo<CellType = T>>) -> Vec<Genome>;
+    fn load_config(&mut self, cfg: GenalgoMethodsConfigurations);
+    fn init_method(&mut self, bestgen: &Genome, nb_cells: u32, nb_elites: u32, algo: &Box<dyn Algo<CellType = T>>, res: &mut Vec<Genome>) -> Result<(), Errcode>;
+    fn process_results(&mut self, elites: &Vec<&CellData>, cells: &Vec<CellData>, algo: &Box<dyn Algo<CellType = T>>, genomes: &mut Vec<Genome>) -> Result<(), Errcode>;
     fn reset(&mut self);
+
+    fn validate_config(&self) -> Result<(), Errcode>;
 }
 
 
@@ -18,17 +21,18 @@ pub enum GenalgoMethodsAvailable{
     Darwin
 }
 
+impl GenalgoMethodsAvailable{
+    pub (crate) fn get_method<T: 'static + Cell>(&self) -> Box<dyn GenalgoMethod<T>>{
+        match self {
+            GenalgoMethodsAvailable::Darwin => Box::new(darwin_method::DarwinMethod::new()),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub (crate) enum GenalgoMethodsConfigurations{
     DarwinConfig(darwin_method::DarwinMethodConfiguration)
 }
-
-pub (crate) fn get_method<T: 'static + Cell>(method: GenalgoMethodsAvailable) -> Box<dyn GenalgoMethod<T>>{
-    match method{
-        GenalgoMethodsAvailable::Darwin => Box::new(darwin_method::DarwinMethod::new()),
-    }
-}
-
 
 pub (crate) fn load_default_config(method: GenalgoMethodsAvailable) -> GenalgoMethodsConfigurations{
     match method{

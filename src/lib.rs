@@ -5,3 +5,6 @@ mod genalgomethods;
 mod genalgo;
 mod builtin_algos;
 mod utils;
+mod lab;
+mod errors;
+mod dataset;
