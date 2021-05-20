@@ -143,9 +143,9 @@ impl AlgoResult{
 
 #[derive(Serialize, Deserialize)]
 pub struct LabConfig{
-    npop:           usize,
-    elite_ratio:    f64,
-    maximize_score: bool,
+    pub npop:           usize,
+    pub elite_ratio:    f64,
+    pub maximize_score: bool,
 }
 
 impl LabConfig{
