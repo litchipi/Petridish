@@ -69,6 +69,12 @@ impl<T: 'static + Cell> Genalgo<T>{
     pub fn import_lab(&self, data: JsonData) -> Result<(), Errcode>{
         Err(Errcode::NotImplemented("import_lab"))
     }
+
+    pub fn test_function(&self) {
+        println!("Genalgo created for usage with cell of type \"{}\"", type_name::<T>());
+    }
+
+
     pub fn register_dataset(&mut self, id: String, dataset: Box<dyn DatasetHandler>){
         self.datasets.push(dataset);
         self.datasets_id.push(id);
