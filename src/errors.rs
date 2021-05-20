@@ -7,6 +7,7 @@ pub enum Errcode{
     NotSet(&'static str),
     IdDoesntExist(usize),
     CodeError(&'static str),
+    DatasetDoesntExist(String),
 }
 
 /*

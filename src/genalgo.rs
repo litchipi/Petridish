@@ -8,7 +8,7 @@ use std::mem;
 use rand::prelude::*;
 
 use crate::errors::Errcode;
-use crate::dataset::DatasetHandler;
+use crate::dataset::{DatasetHandler, EmptyDataset};
 use crate::lab::*;
 use crate::builtin_algos;
 use crate::genalgomethods;
@@ -47,13 +47,17 @@ type LabExport = Vec<(LabConfig, Vec<AlgoConfiguration>, Vec<AlgoResult>, Vec<Ge
 /*  Used to manage labs, get datasets, import / export configurations, binds to Python API,
  *  etc...*/
 pub struct Genalgo<T: Cell>{
-    lab: Lab<T>,
+    lab:        Lab<T>,
+    datasets:   Vec<Box<dyn DatasetHandler>>,
+    datasets_id: Vec<String>,
 }
 
 impl<T: 'static + Cell> Genalgo<T>{
     pub fn new(labconfig: LabConfig, config: GenalgoConfiguration) -> Genalgo<T>{
         Genalgo{
             lab: Lab::new(labconfig, config.genalgo_method),
+            datasets: vec![],
+            datasets_id: vec![],
         }
     }
 
@@ -64,5 +68,20 @@ impl<T: 'static + Cell> Genalgo<T>{
 
     pub fn import_lab(&self, data: JsonData) -> Result<(), Errcode>{
         Err(Errcode::NotImplemented("import_lab"))
+    }
+    pub fn register_dataset(&mut self, id: String, dataset: Box<dyn DatasetHandler>){
+        self.datasets.push(dataset);
+        self.datasets_id.push(id);
+    }
+
+    pub fn remove_dataset(&mut self, id: String) -> Result<(), Errcode>{
+        let ds_ind = self.datasets_id.iter().enumerate().filter(|(_, i)| *i == &id).map(|(n, _)| n).collect::<Vec<usize>>();
+        if let Some(ind) = ds_ind.get(0){
+            self.datasets_id.remove(*ind);
+            self.datasets.remove(*ind);
+            Ok(())
+        }else{
+            Err(Errcode::DatasetDoesntExist(id))
+        }
     }
 }
