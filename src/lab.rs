@@ -245,6 +245,7 @@ impl<T: 'static + Cell> Lab<T>{
 
     /*              INTERNALS               */
     fn __loop_gen(&mut self, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<(), Errcode>{
+        println!("Loop gen");
         for dataset in datasets.iter_mut(){
             self.__run_on_dataset(dataset)?;
         }
@@ -305,6 +306,7 @@ impl<T: 'static + Cell> Lab<T>{
     }
 
     fn __init_lab(&mut self) -> Result<(), Errcode>{
+        println!("Init lab");
         if self.init_done{ return Ok(()); }
         for id in 0..self.algos.len(){
             let mut genomes = vec![];
@@ -330,6 +332,7 @@ impl<T: 'static + Cell> Lab<T>{
     }
 
     fn __validate_configuration(&self) -> Result<(), Errcode>{
+        println!("Validate configuration");
         if self.config.npop < 100                  { return Err(Errcode::InsuffisantPopulation(self.config.npop, 100)); }
         //TODO  Check if the sum of all algos = total population
 
