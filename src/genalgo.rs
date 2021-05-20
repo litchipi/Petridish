@@ -89,3 +89,15 @@ impl<T: 'static + Cell> Genalgo<T>{
         self.lab.start(ngeneration, &mut self.datasets)
     }
 }
+
+use crate::builtin_algos::algo_test;
+pub type GenalgoTest = Genalgo<algo_test::TestCell>;
+
+#[test]
+pub fn test_genalgo(){
+    let config = GenalgoConfiguration::default();
+    let labconfig = LabConfig { npop: 1000, elite_ratio: 0.1, maximize_score: true};
+    let mut genalgo = GenalgoTest::new(labconfig, config);
+    genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(3)));
+    genalgo.start(5);
+}
