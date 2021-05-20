@@ -2,3 +2,4 @@
 Cargo.lock
 .dev_ses
 *.so
+.backup
