@@ -39,6 +39,11 @@ impl GenalgoConfiguration{
             genalgo_method_config: genalgomethods::load_default_config(genalgomethods::GenalgoMethodsAvailable::Darwin)
         }
     }
+
+    pub fn from_json(js: JsonData) -> Result<GenalgoConfiguration, Errcode>{
+        //TODO  Implement GenalgoConfiguration from JsonData
+        Ok(GenalgoConfiguration::default())
+    }
 }
 
 

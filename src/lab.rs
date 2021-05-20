@@ -146,6 +146,14 @@ pub struct LabConfig{
     maximize_score: bool,
 }
 
+impl LabConfig{
+    pub fn from_json(js: JsonData) -> Result<LabConfig, Errcode>{
+        //TODO  LabConfig from JsonData
+        Ok(LabConfig { npop: 10, elite_ratio: 0.4, maximize_score: false})
+    }
+}
+
+
 pub struct Lab<T: Cell>{
     method:     Box<dyn GenalgoMethod<T>>, //GenalgoMethodsAvailable,
 
