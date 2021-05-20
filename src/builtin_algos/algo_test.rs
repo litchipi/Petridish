@@ -44,7 +44,7 @@ impl Algo for TestAlgo{
 
     fn create_cell_from_genome(&self, genome: &Genome) -> Self::CellType{
         TestCell {
-            celldata: CellData { genome: genome.clone(), score: 0.0},
+            celldata: CellData { genome: genome.clone(), score: 0.0, version: 1},
         }
     }
 
@@ -69,6 +69,10 @@ pub struct TestCell{
 }
 
 impl Cell for TestCell{
+    fn genome_version_adapt(genome: &Genome, version: u64) -> Genome{
+        genome.clone()
+    }
+
     fn get_data(&self) -> &CellData{
         &self.celldata
     }

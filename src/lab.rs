@@ -44,13 +44,15 @@ pub type Score = f64;
 #[derive(Clone, Serialize)]
 pub struct CellData{
     pub genome: Genome,
-    pub score: Score
+    pub score: Score,
+    pub version: u64,
 }
 
 pub trait Cell{
     fn get_data(&self) -> &CellData;
     fn action(&mut self, data: &GenalgoData);
     fn reset(&mut self, genome: &Genome);
+    fn genome_version_adapt(genome: &Genome, version: u64) -> Genome;
 }
 
 
