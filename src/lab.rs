@@ -220,11 +220,11 @@ impl<T: 'static + Cell> Lab<T>{
         Ok(self.algos[id].send_special_data(params))
     }
 
-    pub fn start(&mut self, ngeneration: usize, datasets: Vec<Box<dyn DatasetHandler>>) -> Result<(), Errcode>{
+    pub fn start(&mut self, ngeneration: usize, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<(), Errcode>{
         self.__validate_configuration()?;
         self.__init_lab()?;
         for _ in 0..ngeneration{
-            self.__loop_gen(&datasets)?;
+            self.__loop_gen(datasets)?;
         }
         Ok(())
     }
@@ -234,8 +234,8 @@ impl<T: 'static + Cell> Lab<T>{
 
 
     /*              INTERNALS               */
-    fn __loop_gen(&mut self, datasets: &Vec<Box<dyn DatasetHandler>>) -> Result<(), Errcode>{
-        for dataset in datasets.iter(){
+    fn __loop_gen(&mut self, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<(), Errcode>{
+        for dataset in datasets.iter_mut(){
             self.__run_on_dataset(dataset)?;
         }
 
@@ -252,9 +252,19 @@ impl<T: 'static + Cell> Lab<T>{
         Ok(())
     }
 
-    fn __run_on_dataset(&mut self, dataset: &Box<dyn DatasetHandler>) -> Result<(), Errcode>{
-        //TODO  RUN ON DATASET
-        Err(Errcode::NotImplemented("__run_on_dataset"))
+    fn __run_on_dataset(&mut self, dataset: &mut Box<dyn DatasetHandler>) -> Result<(), Errcode>{
+        dataset.prepare();
+        loop{
+            let new_data_got = dataset.get_next_data();
+            if let Some(new_data) = new_data_got{
+                for (n, algo) in self.algos.iter_mut().enumerate(){
+                    algo.process_data(&mut self.cells[n], &new_data);
+                }
+            }else{
+                break;
+            }
+        }
+        Ok(())
     }
 
     fn __propagate_results(&mut self, id: AlgoID, results: &mut Vec<AlgoResult>) -> Result<(), Errcode>{

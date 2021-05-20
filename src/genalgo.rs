@@ -84,4 +84,8 @@ impl<T: 'static + Cell> Genalgo<T>{
             Err(Errcode::DatasetDoesntExist(id))
         }
     }
+
+    pub fn start(&mut self, ngeneration:usize) -> Result<(), Errcode>{
+        self.lab.start(ngeneration, &mut self.datasets)
+    }
 }
