@@ -12,12 +12,12 @@ use std::cmp;
 use std::marker::PhantomData;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
-pub (crate) struct DarwinMethodConfiguration{
+pub struct DarwinMethodConfiguration{
     gene_reroll_proba: f64,
     optimization_ratio_epoch_shift: u32
 }
 
-pub (crate) fn darwin_default_config() -> DarwinMethodConfiguration{
+pub fn darwin_default_config() -> DarwinMethodConfiguration{
     DarwinMethodConfiguration {
         gene_reroll_proba: 0.5,
         optimization_ratio_epoch_shift: 3
@@ -50,7 +50,7 @@ enum BreedingMethod{
     ScoreBasedChoose
 }
 
-pub (crate) struct DarwinMethod<T: Cell>{
+pub struct DarwinMethod<T: Cell>{
     epoch_last_new_best: u32,
     config: DarwinMethodConfiguration,
     _phantom: PhantomData<T>,
