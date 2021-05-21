@@ -1,4 +1,4 @@
-use crate::genalgo::{Genalgo, GenalgoConfiguration};
+use crate::genalgo::Genalgo;
 use crate::lab::{LabConfig, Cell};
 use crate::utils::JsonData;
 use crate::errors::Errcode;
@@ -16,9 +16,9 @@ pub struct PyGenalgoInterface<T: Cell>{
 impl<T: 'static + Cell> PyGenalgoInterface<T>{
     pub fn new(labcfg_json: JsonData, cfg_json:JsonData) -> Result<PyGenalgoInterface<T>, Errcode>{
         let labcfg = LabConfig::from_json(labcfg_json)?;
-        let cfg = GenalgoConfiguration::from_json(cfg_json)?;
+        let cfg = LabConfig::from_json(cfg_json)?;
         Ok(PyGenalgoInterface {
-            genalgo: Genalgo::new(labcfg, cfg)
+            genalgo: Genalgo::new(labcfg)
         })
     }
 }
@@ -37,9 +37,9 @@ macro_rules! create_genalgo_py_iface {
             impl [<Genalgo $name PyIface>]{
                 pub fn new(labcfg_json: JsonData, cfg_json:JsonData) -> Result<[<Genalgo $name PyIface>], Errcode>{
                     let labcfg = LabConfig::from_json(labcfg_json)?;
-                    let cfg = GenalgoConfiguration::from_json(cfg_json)?;
+                    let cfg = LabConfig::from_json(cfg_json)?;
                     Ok([<Genalgo $name PyIface>] {
-                        genalgo: Genalgo::new(labcfg, cfg)
+                        genalgo: Genalgo::new(labcfg)
                     })
                 }
             }

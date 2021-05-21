@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 use rand::prelude::*;
 
 use crate::errors::Errcode;
-use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethod};
+use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethod, GenalgoMethodsConfigurations, load_default_config};
 use crate::genalgo::Genalgo;
 use crate::dataset::{GenalgoData, DatasetHandler};
 use crate::utils::JsonData;
@@ -141,17 +141,29 @@ impl AlgoResult{
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct LabConfig{
     pub npop:           usize,
     pub elite_ratio:    f64,
     pub maximize_score: bool,
+    genalgo_method: GenalgoMethodsAvailable,
+    pub (crate) genalgo_method_config: GenalgoMethodsConfigurations,
 }
 
 impl LabConfig{
+    pub fn default() -> LabConfig{
+        LabConfig {
+            npop: 1000,
+            elite_ratio: 0.1,
+            maximize_score: false,
+            genalgo_method: GenalgoMethodsAvailable::Darwin,
+            genalgo_method_config: load_default_config(GenalgoMethodsAvailable::Darwin)
+        }
+    }
+
     pub fn from_json(js: JsonData) -> Result<LabConfig, Errcode>{
-        //TODO  LabConfig from JsonData
-        Ok(LabConfig { npop: 10, elite_ratio: 0.4, maximize_score: false})
+        //TODO  Implement LabConfig from JsonData
+        Ok(LabConfig::default())
     }
 }
 
@@ -170,9 +182,9 @@ pub struct Lab<T: Cell>{
 }
 
 impl<T: 'static + Cell> Lab<T>{
-    pub fn new(config: LabConfig, method: GenalgoMethodsAvailable) -> Lab<T>{
+    pub fn new(config: LabConfig) -> Lab<T>{
         Lab {
-            method:     method.get_method(),
+            method:     config.genalgo_method.get_method(),
 
             algos:      vec![],
             configs:    vec![],
