@@ -46,6 +46,14 @@ impl<T: 'static + Cell> Genalgo<T>{
         }
     }
 
+    pub fn apply_json_map(&mut self, jsdata: JsonData) -> Result<(), Errcode>{
+        match serde_json::from_str::<Vec<AlgoConfiguration>>(&jsdata){
+            Ok(map) => self.lab.apply_map(map)?,
+            Err(e) => return Err(Errcode::ValidationError("jsonmap")),
+        }
+        Ok(())
+    }
+
     pub fn export_lab(&self) -> Result<JsonData, Errcode>{
         let exports : LabExport = vec![];
         Err(Errcode::NotImplemented("export_lab"))

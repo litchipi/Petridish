@@ -80,6 +80,7 @@ pub trait Algo{
 
 pub type AlgoID = usize;
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AlgoConfiguration{
     give:           Vec<AlgoID>,        // Algos to give best cell
     impr_genes:      Option<Vec<usize>>, // Index of genes to improve
@@ -205,6 +206,17 @@ impl<T: 'static + Cell> Lab<T>{
         }
     }
 
+    pub fn apply_map(&mut self, map: Vec<AlgoConfiguration>) -> Result<(), Errcode> {
+        if self.algos.len() != map.len(){
+            return Err(Errcode::SizeError("map", self.algos.len(), map.len()))
+        }
+        if !self.__validate_map(&map){
+            return Err(Errcode::ValidationError("map"));
+        }
+        self.configs = map.clone();
+        Ok(())
+    }
+
     pub fn register_new_algo(&mut self, algo: Box<dyn Algo<CellType = T>>) -> AlgoID {
         self.configs.push(AlgoConfiguration{give:vec![], impr_genes: Option::None, weight_in_pop: 0.0});
         self.bestgens.push(random_genome(algo.get_genome_length()));
@@ -215,7 +227,12 @@ impl<T: 'static + Cell> Lab<T>{
 
     pub fn configure_algo(&mut self, id: AlgoID, config: AlgoConfiguration) -> Result<(), Errcode> {
         self.__check_id_exist(id)?;
+        let old_config = self.configs[id].clone();
         self.configs[id] = config;
+        if !self.__validate_map(&self.configs){
+            self.configs[id] = old_config;
+            return Err(Errcode::ValidationError("map"));
+        }
         Ok(())
     }
 
@@ -364,5 +381,9 @@ impl<T: 'static + Cell> Lab<T>{
         if self.configs.len() != self.bestgens.len(){ return Err(Errcode::CodeError("configs len != bestgens len")) }
         self.method.validate_config()?;
         Ok(())
+    }
+
+    fn __validate_map(&self, map: &Vec<AlgoConfiguration>) -> bool{
+        true    //TODO  Implement Algo map validation
     }
 }

@@ -50,6 +50,12 @@ macro_rules! create_genalgo_py_iface {
                     self.genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(3)));
                     self.genalgo.start(5);
                 }
+
+                pub fn apply_map(&mut self, map: JsonData){
+                    if let Err(e) = self.genalgo.apply_json_map(map){
+                        println!("{}", e);
+                    }
+                }
             }
 
             #[pyfunction]
