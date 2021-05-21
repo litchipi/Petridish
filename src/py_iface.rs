@@ -71,6 +71,16 @@ macro_rules! create_genalgo_py_iface {
 
 create_genalgo_py_iface!(test, TestCell);
 
+
+#[pyfunction]
+pub fn get_lab_default() -> JsonData{
+    match LabConfig::default().to_json(){
+        Ok(d) => d,
+        Err(e) => {println!("Error: {}", e); //TODO  Python Exception
+            return "".to_string(); }
+    }
+}
+
 #[pymodule]
 fn genalgo(_py: Python, m: &PyModule) -> PyResult<()> {
     /* TODO     Find a way to automatically generate this with a macro

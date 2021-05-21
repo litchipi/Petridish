@@ -174,6 +174,10 @@ impl LabConfig{
         //TODO  Implement LabConfig from JsonData
         Ok(LabConfig::default())
     }
+
+    pub fn to_json(&self) -> Result<JsonData, serde_json::Error>{
+        serde_json::to_string(self)
+    }
 }
 
 
