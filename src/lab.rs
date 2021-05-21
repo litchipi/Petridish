@@ -161,6 +161,14 @@ impl LabConfig{
         }
     }
 
+    pub fn new(npop: usize, elite_ratio: f64, maximize_score: bool) -> LabConfig{
+        let method = GenalgoMethodsAvailable::default();
+        LabConfig{npop: npop, elite_ratio: elite_ratio, maximize_score: maximize_score,
+        genalgo_method: method,
+        genalgo_method_config: load_default_config(method),
+        }
+    }
+
     pub fn from_json(js: JsonData) -> Result<LabConfig, Errcode>{
         //TODO  Implement LabConfig from JsonData
         Ok(LabConfig::default())

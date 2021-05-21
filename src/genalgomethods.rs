@@ -27,6 +27,10 @@ impl GenalgoMethodsAvailable{
             GenalgoMethodsAvailable::Darwin => Box::new(darwin_method::DarwinMethod::new()),
         }
     }
+
+    pub fn default() -> GenalgoMethodsAvailable{
+        GenalgoMethodsAvailable::Darwin
+    }
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
