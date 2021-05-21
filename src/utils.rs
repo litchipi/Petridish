@@ -12,7 +12,7 @@ pub (crate) fn format_error(msg: &str, code: &str, add_data: serde_json::Value) 
     })).expect("Cannot format error message")
 }
 
-fn cells_from_memory<T: Cell>(max_memory: usize) -> usize{
+pub fn cells_from_memory<T: Cell>(max_memory: usize) -> usize{
     ((max_memory as f64)/(mem::size_of::<T>() as f64)) as usize
 }
 

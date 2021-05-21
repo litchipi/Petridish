@@ -8,6 +8,7 @@ use std::any::type_name;
 
 use rand::prelude::*;
 
+use crate::utils::cells_from_memory;
 use crate::errors::Errcode;
 use crate::dataset::{DatasetHandler, EmptyDataset};
 use crate::lab::*;
@@ -32,6 +33,11 @@ pub struct Genalgo<T: Cell>{
 }
 
 impl<T: 'static + Cell> Genalgo<T>{
+
+    pub fn max_cell_nb(max_mem_usage: usize) -> usize{
+        cells_from_memory::<T>(max_mem_usage)
+    }
+
     pub fn new(labconfig: LabConfig) -> Genalgo<T>{
         Genalgo{
             lab: Lab::new(labconfig),
