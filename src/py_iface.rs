@@ -8,22 +8,8 @@ use paste::paste;
 
 extern crate pyo3;
 use pyo3::prelude::*;
-use pyo3::wrap_pyfunction;
-pub struct PyGenalgoInterface<T: Cell>{
-    genalgo: Genalgo<T>,
-}
-
-impl<T: 'static + Cell> PyGenalgoInterface<T>{
-    pub fn new(labcfg_json: JsonData, cfg_json:JsonData) -> Result<PyGenalgoInterface<T>, Errcode>{
-        let labcfg = LabConfig::from_json(labcfg_json)?;
-        let cfg = LabConfig::from_json(cfg_json)?;
-        Ok(PyGenalgoInterface {
-            genalgo: Genalgo::new(labcfg)
-        })
-    }
-}
-use crate::builtin_algos::algo_test::TestCell;
-
+use pyo3::{wrap_pyfunction, wrap_pymodule};
+use pyo3::Python;
 
 macro_rules! create_genalgo_py_iface {
     ($name:ident, $celltype:expr) => {
@@ -35,9 +21,8 @@ macro_rules! create_genalgo_py_iface {
             }
 
             impl [<Genalgo $name PyIface>]{
-                pub fn new(labcfg_json: JsonData, cfg_json:JsonData) -> Result<[<Genalgo $name PyIface>], Errcode>{
+                pub fn new(labcfg_json: JsonData) -> Result<[<Genalgo $name PyIface>], Errcode>{
                     let labcfg = LabConfig::from_json(labcfg_json)?;
-                    let cfg = LabConfig::from_json(cfg_json)?;
                     Ok([<Genalgo $name PyIface>] {
                         genalgo: Genalgo::new(labcfg)
                     })
@@ -46,9 +31,12 @@ macro_rules! create_genalgo_py_iface {
 
             #[pymethods]
             impl [<Genalgo $name PyIface>]{
-                pub fn start(&mut self, data: JsonData){
+                pub fn start(&mut self, ngen: usize){
                     self.genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(3)));
-                    self.genalgo.start(5);
+                    let ret = self.genalgo.start(ngen);
+                    if let Err(e) = ret{
+                        println!("{}", e);
+                    }
                 }
 
                 pub fn apply_map(&mut self, map: JsonData){
@@ -59,17 +47,25 @@ macro_rules! create_genalgo_py_iface {
             }
 
             #[pyfunction]
-            pub fn [<create_algo_ $name>](labcfg: JsonData, cfg: JsonData) -> [<Genalgo $name PyIface>]{
-                match [<Genalgo $name PyIface>]::new(labcfg, cfg){
+            pub fn [<create_algo_ $name>](labcfg: JsonData) -> [<Genalgo $name PyIface>]{
+                match [<Genalgo $name PyIface>]::new(labcfg){
                     Ok(g) => g,
                     Err(e) => panic!("Not implemented"),
                 }
+            }
+
+            #[pymodule]
+            fn [<algo_ $name>](_py: Python, m: &PyModule) -> PyResult<()> {
+                m.add_function(wrap_pyfunction!([<create_algo_ $name>], m)?).unwrap();
+                Ok(())
             }
         }
     };
 }
 
+use crate::builtin_algos::algo_test::TestCell;
 create_genalgo_py_iface!(test, TestCell);
+
 
 
 #[pyfunction]
@@ -83,9 +79,8 @@ pub fn get_lab_default() -> JsonData{
 
 #[pymodule]
 fn genalgo(_py: Python, m: &PyModule) -> PyResult<()> {
-    /* TODO     Find a way to automatically generate this with a macro
-     * m.add_function(wrap_pyfunction!(, m)?).unwrap();
-     */
-    m.add_function(wrap_pyfunction!(create_algo_test, m)?).unwrap();
+    m.add_function(wrap_pyfunction!(get_lab_default, m)?).unwrap();
+    //TODO      Find a way to automatically generate this wrap
+    m.add_wrapped(wrap_pymodule!(algo_test))?;
     Ok(())
 }
