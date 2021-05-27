@@ -15,7 +15,7 @@ use crate::lab::*;
 use crate::builtin_algos;
 use crate::genalgomethods;
 use crate::utils::{MeanCompute, JsonData};
-use crate::algo::{AlgoConfiguration, AlgoResult, Algo, celltype_support_algo};
+use crate::algo::{AlgoConfiguration, AlgoResult, Algo};
 use crate::cell::{Genome, Cell};
 use log::{info, trace, warn};
 

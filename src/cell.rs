@@ -48,5 +48,4 @@ pub trait Cell{
     fn action(&mut self, data: &GenalgoData);
     fn reset(&mut self, genome: &Genome);
     fn genome_version_adapt(genome: &Genome, version: u64) -> Genome;
-    fn get_compatible_algorithms() -> Vec<&'static str>;
 }

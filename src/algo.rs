@@ -94,7 +94,3 @@ impl AlgoResult{
         res
     }
 }
-
-pub fn celltype_support_algo<T: Cell>(name: &String) -> bool{
-    T::get_compatible_algorithms().contains(&name.as_str())
-}
