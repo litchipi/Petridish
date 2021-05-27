@@ -87,7 +87,6 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
         }
     }
 
-    //TODO IMPORTANT Propagate cells last results through generations (test with xinsheyang1 function)
     fn process_results(&mut self, elites: &Vec<&CellData>, cells: &Vec<CellData>, algo: &Box<dyn Algo<CellType = T>>, genomes: &mut Vec<Genome>) -> Result<(), Errcode>{
         let mut rng = rand::thread_rng();
 
