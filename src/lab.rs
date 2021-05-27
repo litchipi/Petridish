@@ -64,6 +64,7 @@ pub struct Lab<T: Cell>{
 
 impl<T: 'static + Cell> Lab<T>{
     pub fn new(config: LabConfig) -> Lab<T>{
+        println!("New lab");
         Lab {
             method:     config.genalgo_method.get_method(),
 
@@ -140,6 +141,7 @@ impl<T: 'static + Cell> Lab<T>{
     }
 
     pub fn start(&mut self, ngeneration: usize, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<(), Errcode>{
+        println!("Starting lab");
         self.__validate_configuration()?;
         self.__init_lab()?;
         for _ in 0..ngeneration{
@@ -242,6 +244,7 @@ impl<T: 'static + Cell> Lab<T>{
 
     fn __validate_configuration(&mut self) -> Result<(), Errcode>{
         println!("Validate configuration");
+        println!("Lab config: {}", self.config.to_json().unwrap());
         if self.config.npop < 100                   { return Err(Errcode::InsuffisantPopulation(self.config.npop, 100)); }
         //TODO  Check if the sum of all algos = total population
         if self.algos.len() == 0                    { return Err(Errcode::NotSet("lab algorithms")); }
@@ -251,6 +254,8 @@ impl<T: 'static + Cell> Lab<T>{
         if self.algos.len() != self.configs.len()   { return Err(Errcode::CodeError("algos len != configs len")) }
         if self.cells.len() != self.algos.len()     { return Err(Errcode::CodeError("populations len != algos len")) }
         if self.configs.len() != self.bestgens.len(){ return Err(Errcode::CodeError("configs len != bestgens len")) }
+
+        println!("Lab configuration validated");
         self.method.validate_config()?;
         Ok(())
     }

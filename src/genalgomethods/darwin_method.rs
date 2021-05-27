@@ -128,6 +128,7 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
     }
 
     fn validate_config(&self) -> Result<(), Errcode>{
+        println!("Validation of Darwin config");
         Err(Errcode::NotImplemented("Darwin validate config"))
     }
 }

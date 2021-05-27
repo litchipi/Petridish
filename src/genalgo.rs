@@ -41,6 +41,7 @@ impl<T: 'static + Cell> Genalgo<T>{
     }
 
     pub fn new(labconfig: LabConfig) -> Genalgo<T>{
+        println!("New genalgo");
         Genalgo{
             lab: Lab::new(labconfig),
             datasets: vec![],
