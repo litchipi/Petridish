@@ -89,12 +89,12 @@ impl<T: 'static + Cell> Lab<T>{
         Ok(())
     }
 
-    pub fn register_new_algo(&mut self, algo: Box<dyn Algo<CellType = T>>) -> AlgoID {
+    pub fn register_new_algo(&mut self, algo: Box<dyn Algo<CellType = T>>) -> Result<AlgoID, Errcode> {
         self.configs.push(AlgoConfiguration{give:vec![], impr_genes: Option::None, weight_in_pop: 0.0});
         self.bestgens.push(random_genome(algo.get_genome_length()));
         self.cells.push(vec![]);
         self.algos.push(algo);
-        self.algos.len() - 1
+        Ok(self.algos.len() - 1)
     }
 
     pub fn configure_algo(&mut self, id: AlgoID, config: AlgoConfiguration) -> Result<(), Errcode> {

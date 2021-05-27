@@ -29,7 +29,7 @@ type LabExport = Vec<(LabConfig, Vec<AlgoConfiguration>, Vec<AlgoResult>, Vec<Ge
 /*  Used to manage labs, get datasets, import / export configurations, binds to Python API,
  *  etc...*/
 pub struct Genalgo<T: Cell>{
-    lab:        Lab<T>,
+    pub lab:        Lab<T>,
     datasets:   Vec<Box<dyn DatasetHandler>>,
     datasets_id: Vec<String>,
 }
@@ -46,14 +46,6 @@ impl<T: 'static + Cell> Genalgo<T>{
             datasets: vec![],
             datasets_id: vec![],
         }
-    }
-
-    pub fn apply_json_map(&mut self, jsdata: JsonData) -> Result<(), Errcode>{
-        match serde_json::from_str::<Vec<AlgoConfiguration>>(&jsdata){
-            Ok(map) => self.lab.apply_map(map)?,
-            Err(e) => return Err(Errcode::ValidationError("jsonmap")),
-        }
-        Ok(())
     }
 
     pub fn export_lab(&self) -> Result<JsonData, Errcode>{
@@ -84,6 +76,16 @@ impl<T: 'static + Cell> Genalgo<T>{
         }else{
             Err(Errcode::DatasetDoesntExist(id))
         }
+    }
+
+
+    /*          Public API          */
+    pub fn apply_json_map(&mut self, jsdata: JsonData) -> Result<(), Errcode>{
+        match serde_json::from_str::<Vec<AlgoConfiguration>>(&jsdata){
+            Ok(map) => self.lab.apply_map(map)?,
+            Err(e) => return Err(Errcode::ValidationError("jsonmap")),
+        }
+        Ok(())
     }
 
     pub fn start(&mut self, ngeneration:usize) -> Result<(), Errcode>{
