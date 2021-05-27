@@ -6,16 +6,14 @@ use crate::dataset::EmptyDataset;
 use crate::cell::Cell;
 use crate::algo::Algo;
 
-use paste::paste;
+pub use paste::paste;
+pub use pyo3::prelude::*;
+pub use pyo3::{wrap_pyfunction, wrap_pymodule};
+pub use pyo3::Python;
 
+#[macro_export]
 macro_rules! generate_py_ifaces {
     [$([$name:ident] $celltype:tt => ($($algoname:ident => $algotype:ty),+)),* $(,)?] => {
-
-        extern crate pyo3;
-        use pyo3::prelude::*;
-        use pyo3::{wrap_pyfunction, wrap_pymodule};
-        use pyo3::Python;
-
         $(
             paste!{
                 #[pyclass(unsendable, dict)]

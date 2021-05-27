@@ -8,6 +8,12 @@ mod utils;
 mod lab;
 mod errors;
 mod dataset;
-mod py_iface;
 mod algo;
 mod cell;
+
+#[macro_use]
+pub mod py_iface;
+
+pub extern crate paste;
+#[macro_use]
+pub extern crate pyo3;
