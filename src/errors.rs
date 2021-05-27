@@ -10,6 +10,7 @@ pub enum Errcode{
     DatasetDoesntExist(String),
     SizeError(&'static str, usize, usize),        // Expected, Got
     ValidationError(&'static str),
+    JsonSerializationError(Error),
 }
 
 impl fmt::Display for Errcode{
