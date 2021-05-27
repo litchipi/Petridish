@@ -4,7 +4,6 @@ use crate::errors::Errcode;
 use crate::genalgo::Genalgo;
 use crate::dataset::GenalgoData;
 use crate::cell::{Genome, CellData, Cell};
-use crate::builtin_algos::BuiltinAlgo;
 
 use serde::{Serialize, Deserialize};
 
