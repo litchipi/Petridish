@@ -102,5 +102,9 @@ pub fn test_genalgo(){
     let labconfig = LabConfig::default();
     let mut genalgo = GenalgoTest::new(labconfig);
     genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(3)));
-    genalgo.start(5);
+    if let Ok(()) = genalgo.start(1){
+        assert!(true);
+    }else{
+        assert!(false);
+    }
 }
