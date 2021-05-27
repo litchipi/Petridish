@@ -161,7 +161,7 @@ impl Algo for BenchmarkAlgo{
         }
     }
 
-    fn check_generation_over(&self, genalgo: &Genalgo<BenchmarkCell>) -> bool{
+    fn check_generation_over(&self, genalgo: &Lab<BenchmarkCell>) -> bool{
         true
     }
 

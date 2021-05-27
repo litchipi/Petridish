@@ -51,7 +51,7 @@ impl Algo for TestAlgo{
         }
     }
 
-    fn check_generation_over(&self, genalgo: &Genalgo<TestCell>) -> bool{
+    fn check_generation_over(&self, genalgo: &Lab<TestCell>) -> bool{
         false
     }
 
