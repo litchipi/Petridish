@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::mem;
 use std::any::type_name;
+use log::{info, trace, warn};
 
 use rand::prelude::*;
 
@@ -17,7 +18,6 @@ use crate::genalgomethods;
 use crate::utils::{MeanCompute, JsonData};
 use crate::algo::{AlgoConfiguration, AlgoResult, Algo};
 use crate::cell::{Genome, Cell};
-use log::{info, trace, warn};
 
 extern crate serde;
 use serde::{Serialize, Deserialize};

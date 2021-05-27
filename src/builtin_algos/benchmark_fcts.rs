@@ -1,8 +1,3 @@
-use std::cell::RefCell;
-use std::mem;
-
-use rand::prelude::*;
-
 use crate::lab::*;
 use crate::genalgo::Genalgo;
 use crate::dataset::GenalgoData;
@@ -10,7 +5,12 @@ use crate::utils::{JsonData, format_error};
 use crate::cell::{Genome, Cell, CellData};
 use crate::algo::Algo;
 
+use std::cell::RefCell;
+use std::mem;
+use rand::prelude::*;
 use serde_json::{from_str, Value, to_string, json};
+
+//TODO  Use separate Cells for each separate math function, with same algo
 
 type FctScope = (i64, i64);
 
