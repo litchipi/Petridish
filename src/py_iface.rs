@@ -8,81 +8,99 @@ use crate::algo::Algo;
 
 use paste::paste;
 
-extern crate pyo3;
-use pyo3::prelude::*;
-use pyo3::{wrap_pyfunction, wrap_pymodule};
-use pyo3::Python;
+macro_rules! generate_py_ifaces {
+    [$([$name:ident] $celltype:tt => ($($algoname:ident => $algotype:ty),+)),* $(,)?] => {
 
-macro_rules! create_genalgo_py_iface {
-    ($name:ident, $celltype:expr) => {
-        paste!{
+        extern crate pyo3;
+        use pyo3::prelude::*;
+        use pyo3::{wrap_pyfunction, wrap_pymodule};
+        use pyo3::Python;
 
-            #[pyclass(unsendable)]
-            pub struct [<Genalgo $name PyIface>] {
-                genalgo: Genalgo<$celltype>,
-            }
-
-            impl [<Genalgo $name PyIface>]{
-                pub fn new(labcfg_json: JsonData) -> Result<[<Genalgo $name PyIface>], Errcode>{
-                    let labcfg = LabConfig::from_json(labcfg_json)?;
-                    Ok([<Genalgo $name PyIface>] {
-                        genalgo: Genalgo::new(labcfg)
-                    })
+        $(
+            paste!{
+                #[pyclass(unsendable, dict)]
+                pub struct [<Lab $name PyIface>] {
+                    genalgo: Genalgo<$celltype>,
                 }
-            }
 
-            #[pymethods]
-            impl [<Genalgo $name PyIface>]{
-                pub fn start(&mut self, ngen: usize){
-                    self.genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(3)));
-                    let ret = self.genalgo.start(ngen);
-                    if let Err(e) = ret{
-                        println!("{}", e);
+                impl [<Lab $name PyIface>]{
+                    pub fn new(labcfg_json: JsonData) -> Result<[<Lab $name PyIface>], Errcode>{
+                        let labcfg = LabConfig::from_json(labcfg_json)?;
+                        Ok([<Lab $name PyIface>] {
+                            genalgo: Genalgo::new(labcfg)
+                        })
                     }
                 }
 
-                pub fn apply_map(&mut self, map: JsonData){
-                    if let Err(e) = self.genalgo.apply_json_map(map){
-                        println!("{}", e);
+                #[pymethods]
+                impl [<Lab $name PyIface>]{
+                    pub fn start(&mut self, ngen: usize){
+                        self.genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(3)));
+                        let ret = self.genalgo.start(ngen);
+                        println!("genalgo finished");
+                        if let Err(e) = ret{
+                            println!("Error");
+                            println!("{}", e);
+                        }
+                    }
+
+                    pub fn apply_map(&mut self, map: JsonData){
+                        $(
+                            println!("{} => {}", stringify!($algoname), stringify!($algotype));
+                        )*
+                        if let Err(e) = self.genalgo.apply_json_map(map){
+                            println!("{}", e);
+                        }
+                    }
+
+                    $(
+                        pub fn [<register_algo_ $algoname>](&mut self){
+                            if let Err(e) = self.genalgo.lab.register_new_algo(Box::new(<$algotype as Algo>::new())){
+                                println!("Error: {}", e);
+                            }
+                        }
+                    )*
+                }
+
+                #[pyfunction]
+                pub fn [<create_lab_ $name>](labcfg: JsonData) -> [<Lab $name PyIface>]{
+                    match [<Lab $name PyIface>]::new(labcfg){
+                        Ok(g) => g,
+                        Err(e) => panic!("Not implemented"),
                     }
                 }
             }
+        )*
 
-            #[pyfunction]
-            pub fn [<create_algo_ $name>](labcfg: JsonData) -> [<Genalgo $name PyIface>]{
-                match [<Genalgo $name PyIface>]::new(labcfg){
-                    Ok(g) => g,
-                    Err(e) => panic!("Not implemented"),
+
+        #[pyfunction]
+        pub fn get_lab_default() -> JsonData{
+            match LabConfig::default().to_json(){
+                Ok(d) => d,
+                Err(e) => {println!("Error: {}", e); //TODO  Python Exception
+                    return "".to_string(); }
+            }
+        }
+
+        #[pymodule]
+        fn genalgo(_py: Python, m: &PyModule) -> PyResult<()> {
+            m.add_function(wrap_pyfunction!(get_lab_default, m)?).unwrap();
+            $(
+                paste! {
+                    m.add_function(wrap_pyfunction!([<create_lab_ $name>], m)?).unwrap();
                 }
-            }
-
-            #[pymodule]
-            fn [<algo_ $name>](_py: Python, m: &PyModule) -> PyResult<()> {
-                m.add_function(wrap_pyfunction!([<create_algo_ $name>], m)?).unwrap();
-                Ok(())
-            }
+            )*
+            Ok(())
         }
     };
 }
 
-use crate::builtin_algos::algo_test::TestCell;
-create_genalgo_py_iface!(test, TestCell);
+//TODO IMPORTANT Migrate builtin_algos in separate exemples to be used
 
+use crate::builtin_algos::benchmark_fcts::{BenchmarkCell, BenchmarkAlgo};
+use crate::builtin_algos::algo_test::{TestCell, TestAlgo, TestAlgo2};
 
-
-#[pyfunction]
-pub fn get_lab_default() -> JsonData{
-    match LabConfig::default().to_json(){
-        Ok(d) => d,
-        Err(e) => {println!("Error: {}", e); //TODO  Python Exception
-            return "".to_string(); }
-    }
-}
-
-#[pymodule]
-fn genalgo(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(get_lab_default, m)?).unwrap();
-    //TODO      Find a way to automatically generate this wrap
-    m.add_wrapped(wrap_pymodule!(algo_test))?;
-    Ok(())
-}
+generate_py_ifaces!(
+    [test] TestCell => (test => TestAlgo, test2 => TestAlgo2),
+    [benchmark] BenchmarkCell => (benchmark => BenchmarkAlgo),
+);
