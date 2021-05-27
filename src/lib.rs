@@ -9,3 +9,5 @@ mod lab;
 mod errors;
 mod dataset;
 mod py_iface;
+mod algo;
+mod cell;

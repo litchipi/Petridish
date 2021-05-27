@@ -4,6 +4,9 @@ use crate::lab::*;
 use crate::dataset::GenalgoData;
 use crate::genalgo::Genalgo;
 use crate::utils::JsonData;
+use crate::algo::Algo;
+use crate::cell::{Genome, __genome_from_json, __genome_to_json, CellData, Cell};
+
 const KEY_LIST: [&str; 2] = ["parameter1", "parameter2"];
 
 #[derive(Clone)]

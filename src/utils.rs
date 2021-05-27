@@ -2,7 +2,7 @@ use std::mem;
 use serde_json::*;
 pub type JsonData = String;
 
-use crate::lab::Cell;
+use crate::cell::Cell;
 
 pub (crate) fn format_error(msg: &str, code: &str, add_data: serde_json::Value) -> JsonData {
     serde_json::to_string(&json!({

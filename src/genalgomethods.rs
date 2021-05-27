@@ -1,5 +1,8 @@
 use crate::errors::Errcode;
 use crate::lab::*;
+use crate::cell::{Cell, Genome, CellData};
+use crate::algo::Algo;
+
 use serde::{Serialize, Deserialize};
 
 mod darwin_method;

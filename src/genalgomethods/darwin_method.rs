@@ -5,6 +5,8 @@ use crate::errors::Errcode;
 use crate::utils::{MeanComputeVec, StddevComputeVec};
 use crate::lab;
 use crate::genalgomethods::*;
+use crate::cell::{Cell, Genome, CellData};
+use crate::algo::Algo;
 
 
 use serde::{Serialize, Deserialize};

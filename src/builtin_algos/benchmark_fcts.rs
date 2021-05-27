@@ -7,6 +7,9 @@ use crate::lab::*;
 use crate::genalgo::Genalgo;
 use crate::dataset::GenalgoData;
 use crate::utils::{JsonData, format_error};
+use crate::cell::{Genome, Cell, CellData};
+use crate::algo::Algo;
+
 use serde_json::{from_str, Value, to_string, json};
 
 type FctScope = (i64, i64);

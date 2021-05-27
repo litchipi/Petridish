@@ -1,8 +1,10 @@
 use crate::genalgo::Genalgo;
-use crate::lab::{LabConfig, Cell};
+use crate::lab::LabConfig;
 use crate::utils::JsonData;
 use crate::errors::Errcode;
 use crate::dataset::EmptyDataset;
+use crate::cell::Cell;
+use crate::algo::Algo;
 
 use paste::paste;
 

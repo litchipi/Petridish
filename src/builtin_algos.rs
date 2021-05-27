@@ -1,5 +1,6 @@
 use crate::genalgo::*;
-use crate::lab::Algo;
+use crate::algo::Algo;
+use crate::cell::Cell;
 
 pub mod algo_test;
 pub mod benchmark_fcts;
