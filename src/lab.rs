@@ -240,14 +240,14 @@ impl<T: 'static + Cell> Lab<T>{
         else { Err(Errcode::IdDoesntExist(id))}
     }
 
-    fn __validate_configuration(&self) -> Result<(), Errcode>{
+    fn __validate_configuration(&mut self) -> Result<(), Errcode>{
         println!("Validate configuration");
-        if self.config.npop < 100                  { return Err(Errcode::InsuffisantPopulation(self.config.npop, 100)); }
+        if self.config.npop < 100                   { return Err(Errcode::InsuffisantPopulation(self.config.npop, 100)); }
         //TODO  Check if the sum of all algos = total population
-
-        if self.algos.len() == 0            { return Err(Errcode::NotSet("register algorithms")); }
-        if self.out_algo == Option::None    { return Err(Errcode::NotSet("output algorithm")); }
-
+        if self.algos.len() == 0                    { return Err(Errcode::NotSet("lab algorithms")); }
+        if self.algos.len() == 1{
+            self.out_algo = Some(0);
+        } else if self.out_algo == Option::None      { return Err(Errcode::NotSet("output algorithm")); }
         if self.algos.len() != self.configs.len()   { return Err(Errcode::CodeError("algos len != configs len")) }
         if self.cells.len() != self.algos.len()     { return Err(Errcode::CodeError("populations len != algos len")) }
         if self.configs.len() != self.bestgens.len(){ return Err(Errcode::CodeError("configs len != bestgens len")) }
