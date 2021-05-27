@@ -1,4 +1,5 @@
 use std::fmt;
+use serde_json::Error;
 
 #[derive(Debug)]
 pub enum Errcode{
