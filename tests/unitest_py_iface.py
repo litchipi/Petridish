@@ -4,7 +4,9 @@
 import genalgo
 
 def test0():
-    genalgo.algo_test.create_algo_test(genalgo.get_lab_default()).start(100)
+    obj = genalgo.create_lab_test(genalgo.get_lab_default())
+    obj.register_algo_test()
+    obj.start(100)
 
 ALL_TESTS = [
         test0
