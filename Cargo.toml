@@ -1,12 +1,12 @@
 [package]
-name = "genalgo_engine"
+name = "petridish"
 version = "0.1.0"
-authors = ["John <john@sparta>"]
+authors = ["Litchipi <litchi.pi@protonmail.com>"]
 edition = "2018"
 
 [lib]
-name = "genalgo_engine"
-crate-type = ["cdylib"]
+name = "petridish"
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 serde = {version = "1.0.118", features = ["derive"]}
