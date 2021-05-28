@@ -28,7 +28,7 @@ pub type AlgoID = usize;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AlgoConfiguration{
-    //TODO  Add genalgo method here, as string (will use registered genalgo method)
+    pub method:         String,
     pub give:           Vec<AlgoID>,        // Algos to give best cell
     pub impr_genes:     Option<Vec<usize>>, // Index of genes to improve
     pub weight_in_pop:  f64                 // Part of the population (in weight)

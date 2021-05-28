@@ -1,17 +1,16 @@
 use crate::errors::Errcode;
 use crate::cell::{Cell, Genome, CellData};
+use crate::utils::JsonData;
 
 use serde::{Serialize, Deserialize};
 
 mod darwin_method;
 
-//TODO  Modify so method are usable by any algo at any moment (do not store algo-specific data)
-//          Only provide a set of functions usefull for genalgo
 pub trait GenalgoMethod<T: Cell>{
     fn new() -> Self where Self: Sized;
-    //TODO  Import from JsonData
+    fn json_import(&mut self, jsdata: JsonData) -> Self where Self: Sized;
     fn load_config(&mut self, cfg: GenalgoMethodsConfigurations);
-    fn init_method(&mut self, bestgen: &Genome, nb_cells: u32, nb_elites: u32, res: &mut Vec<Genome>) -> Result<(), Errcode>;
+    fn init_population(&mut self, bestgen: &Genome, nb_cells: u32, nb_elites: u32, res: &mut Vec<Genome>) -> Result<(), Errcode>;
     fn process_results(&mut self, elites: &Vec<&CellData>, cells: &Vec<CellData>, genomes: &mut Vec<Genome>) -> Result<(), Errcode>;
     fn reset(&mut self);
 
@@ -25,8 +24,13 @@ pub enum GenalgoMethodsAvailable{
 }
 
 impl GenalgoMethodsAvailable{
-    //TODO  Get method by name
-    //TODO  Rename to "build"
+    pub fn get_by_name(name: String) -> Option<GenalgoMethodsAvailable>{
+        match name.as_str() {
+            "Darwin" => Some(GenalgoMethodsAvailable::Darwin),
+            _ => Option::None
+        }
+    }
+
     pub fn build<T: 'static + Cell>(&self) -> Box<dyn GenalgoMethod<T>>{
         match self {
             GenalgoMethodsAvailable::Darwin => Box::new(darwin_method::DarwinMethod::new()),

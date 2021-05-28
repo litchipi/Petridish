@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
 use crate::errors::Errcode;
-use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethod, GenalgoMethodsConfigurations, load_default_config};
+use crate::genalgomethods::GenalgoMethod;
 use crate::dataset::DatasetHandler;
 use crate::utils::JsonData;
 use crate::cell::{Genome, random_genome, Cell};
@@ -12,8 +12,6 @@ pub struct LabConfig{
     pub npop:           usize,
     pub elite_ratio:    f64,
     pub maximize_score: bool,
-    genalgo_method: GenalgoMethodsAvailable,    //TODO  Remove genalgo method here, migrate to per-algo parameter
-    pub (crate) genalgo_method_config: GenalgoMethodsConfigurations,
 }
 
 impl LabConfig{
@@ -22,17 +20,11 @@ impl LabConfig{
             npop: 1000,
             elite_ratio: 0.1,
             maximize_score: false,
-            genalgo_method: GenalgoMethodsAvailable::Darwin,
-            genalgo_method_config: load_default_config(GenalgoMethodsAvailable::Darwin)
         }
     }
 
     pub fn new(npop: usize, elite_ratio: f64, maximize_score: bool) -> LabConfig{
-        let method = GenalgoMethodsAvailable::default();
-        LabConfig{npop: npop, elite_ratio: elite_ratio, maximize_score: maximize_score,
-        genalgo_method: method,
-        genalgo_method_config: load_default_config(method),
-        }
+        LabConfig{npop: npop, elite_ratio: elite_ratio, maximize_score: maximize_score}
     }
 
     pub fn from_json(_js: JsonData) -> Result<LabConfig, Errcode>{
@@ -47,7 +39,7 @@ impl LabConfig{
 
 
 pub struct Lab<T: Cell>{
-    method:     Box<dyn GenalgoMethod<T>>, //GenalgoMethodsAvailable,
+    genalgo_methods:    Vec<Box<dyn GenalgoMethod<T>>>,
 
     algos:      Vec<Box<dyn Algo<CellType = T>>>,
     configs:    Vec<AlgoConfiguration>,
@@ -63,7 +55,7 @@ impl<T: 'static + Cell> Lab<T>{
     pub fn new(config: LabConfig) -> Lab<T>{
         println!("New lab");
         Lab {
-            method:     config.genalgo_method.get_method(),
+            genalgo_methods: vec![],
 
             algos:      vec![],
             configs:    vec![],
@@ -88,7 +80,7 @@ impl<T: 'static + Cell> Lab<T>{
     }
 
     pub fn register_new_algo(&mut self, algo: Box<dyn Algo<CellType = T>>) -> Result<AlgoID, Errcode> {
-        self.configs.push(AlgoConfiguration{give:vec![], impr_genes: Option::None, weight_in_pop: 0.0});
+        self.configs.push(AlgoConfiguration{give:vec![], impr_genes: Option::None, weight_in_pop: 0.0, method: String::from("")});
         self.bestgens.push(random_genome(T::get_genome_length()));
         self.cells.push(vec![]);
         self.algos.push(algo);
@@ -152,6 +144,10 @@ impl<T: 'static + Cell> Lab<T>{
 
 
     /*              INTERNALS               */
+    fn get_method_from_algo(&self, _algoid: AlgoID) -> Result<Box<dyn GenalgoMethod<T>>, Errcode>{
+        Err(Errcode::NotImplemented("get_method_from_algo"))
+    }
+
     fn __loop_gen(&mut self, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<(), Errcode>{
         println!("Loop gen");
         for dataset in datasets.iter_mut(){
@@ -197,7 +193,11 @@ impl<T: 'static + Cell> Lab<T>{
 
     fn __prepare_next_gen(&mut self, id: AlgoID, res: &AlgoResult) -> Result<(), Errcode>{
         let mut genomes = vec![];
-        self.method.process_results(
+        //Register methods
+        //self.algo.get(id)
+        //  -> get method id
+        //  -> self.methods.get(method_id).process_results( ... )
+        self.get_method_from_algo(id)?.process_results(
             &res.get_elites(),
             &res.cells_data,
             &mut genomes
@@ -219,7 +219,7 @@ impl<T: 'static + Cell> Lab<T>{
             let mut genomes = vec![];
 
             let (pop, elite) = self.configs.get(id).unwrap().get_pop_and_elite(self.config.npop, self.config.elite_ratio);
-            self.method.init_method(
+            self.get_method_from_algo(id)?.init_population(
                 self.bestgens.get(id).unwrap(),
                 pop as u32, elite as u32,
                 &mut genomes)?;
@@ -251,7 +251,9 @@ impl<T: 'static + Cell> Lab<T>{
         if self.configs.len() != self.bestgens.len(){ return Err(Errcode::CodeError("configs len != bestgens len")) }
 
         println!("Lab configuration validated");
-        self.method.validate_config()?;
+        for method in self.genalgo_methods.iter(){
+            method.validate_config()?;
+        }
         Ok(())
     }
 

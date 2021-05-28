@@ -54,7 +54,6 @@ pub struct DarwinMethod<T: Cell>{
     _phantom: PhantomData<T>,
 }
 
-//TODO  Replace T::get_genome_length() by T::get_genome_length() (or similar)
 impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
     fn new() -> Self where Self : Sized{
         DarwinMethod {
@@ -62,6 +61,10 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
             config: darwin_default_config(),
             _phantom: PhantomData,
         }
+    }
+    
+    fn json_import(&mut self, _jsdata: JsonData) -> Self where Self: Sized{
+        todo!();
     }
 
     fn reset(&mut self){
@@ -74,7 +77,7 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
         }.clone();
     }
 
-    fn init_method(&mut self, bestgen: &Genome, nb_cells: u32, nb_elites: u32, res: &mut Vec<Genome>) -> Result<(), Errcode>{
+    fn init_population(&mut self, bestgen: &Genome, nb_cells: u32, nb_elites: u32, res: &mut Vec<Genome>) -> Result<(), Errcode>{
         if bestgen.len() == 0 {
             return Ok(self.__init_generate_random_population(nb_cells, res))
         } else if bestgen.len() < T::get_genome_length() {
