@@ -93,15 +93,3 @@ macro_rules! generate_py_ifaces {
         }
     };
 }
-
-//TODO IMPORTANT Migrate builtin_algos in separate exemples to be used
-
-/*
-use crate::builtin_algos::benchmark_fcts::{BenchmarkCell, BenchmarkAlgo};
-use crate::builtin_algos::algo_test::{TestCell, TestAlgo, TestAlgo2};
-
-generate_py_ifaces!(crate,
-    [test] TestCell => (test => TestAlgo, test2 => TestAlgo2),
-    [benchmark] BenchmarkCell => (benchmark => BenchmarkAlgo),
-);
-*/
