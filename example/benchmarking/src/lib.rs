@@ -12,12 +12,6 @@ use fcts::*;
 use serde_json::json;
 
 #[derive(Clone)]
-pub struct BenchmarkAlgo{
-    math_fct: BenchmarkFct,
-    fct_dimension: u8
-}
-
-#[derive(Clone)]
 pub struct BenchmarkCell{
     celldata: CellData,
     math_fct: RefCell<BenchmarkFct>
@@ -27,6 +21,12 @@ impl BenchmarkCell{
     fn set_math_fct(&mut self, fct: BenchmarkFct){
         self.math_fct = RefCell::new(fct);
     }
+}
+
+#[derive(Clone)]
+pub struct BenchmarkAlgo{
+    math_fct: BenchmarkFct,
+    fct_dimension: u8
 }
 
 impl BenchmarkAlgo{
@@ -83,7 +83,7 @@ impl Algo for BenchmarkAlgo{
         }
     }
 
-    fn genome_from_json(&self, jsdata: JsonData) -> Genome{
+    fn genome_from_json(&self, _jsdata: JsonData) -> Genome{
         Genome::new()
     }
 
@@ -98,7 +98,7 @@ impl Algo for BenchmarkAlgo{
         }
     }
 
-    fn check_generation_over(&self, genalgo: &Lab<BenchmarkCell>) -> bool{
+    fn check_generation_over(&self, _genalgo: &Lab<BenchmarkCell>) -> bool{
         true
     }
 
@@ -123,7 +123,7 @@ impl Cell for BenchmarkCell{
         0   //TODO  IMPORTANT get_genome_length
     }
 
-    fn genome_version_adapt(genome: &Genome, version: u64) -> Genome{
+    fn genome_version_adapt(genome: &Genome, _version: u64) -> Genome{
         genome.clone()
     }
 
@@ -131,7 +131,7 @@ impl Cell for BenchmarkCell{
         &self.celldata
     }
 
-    fn action(&mut self, data: &GenalgoData){
+    fn action(&mut self, _data: &GenalgoData){
         let mut f = self.math_fct.borrow_mut();
         self.celldata.score = (f.get_minimum() - f.calc(&self.celldata.genome)).abs();
     }
@@ -143,5 +143,5 @@ impl Cell for BenchmarkCell{
 
 generate_py_ifaces!(petridish,
     //TODO  One algo for one math function -> macro generated
-    [benchmark] BenchmarkCell => (spherical => BenchmarkAlgo, xin_she_yang1 => BenchmarkAlgo, xin_she_yang2 => BenchmarkAlgo),
+    [benchmark] BenchmarkCell => (benchmark => BenchmarkAlgo),
 );

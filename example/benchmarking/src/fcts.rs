@@ -29,18 +29,18 @@ impl BenchmarkFct{
 
     pub fn get_expected_optimum(&self, ndim: u8, scope: FctScope) -> Vec<f64>{
         match self {
-            BenchmarkFct::Spherical(f) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
-            BenchmarkFct::XinSheYang1(f) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
-            BenchmarkFct::XinSheYang2(f) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
+            BenchmarkFct::Spherical(_) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
+            BenchmarkFct::XinSheYang1(_) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
+            BenchmarkFct::XinSheYang2(_) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
             _ => panic!("Function not set or recognized"),
         }
     }
 
     pub fn get_minimum(&self) -> f64{
         match self {
-            BenchmarkFct::Spherical(f) => 0.0,
-            BenchmarkFct::XinSheYang1(f) => 0.0,
-            BenchmarkFct::XinSheYang2(f) => 0.0,
+            BenchmarkFct::Spherical(_) => 0.0,
+            BenchmarkFct::XinSheYang1(_) => 0.0,
+            BenchmarkFct::XinSheYang2(_) => 0.0,
             _ => panic!("Function not set or recognized"),
         }
     }
