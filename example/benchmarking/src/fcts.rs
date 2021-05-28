@@ -3,9 +3,14 @@ use rand::prelude::*;
 
 type FctScope = (i64, i64);
 
-trait MathFct{
-    fn calc(&self, inputs: &Genome) -> f64;
-    fn set_scope(&mut self, scope: FctScope);
+/*              BENCHMARKING FUNCTIONS              */
+fn coordinates_to_gene(scope: FctScope, coordinate: f64) -> f64{
+    coordinate/((scope.1 - scope.0) as f64)
+}
+
+fn coordinates_from_gene(scope: FctScope, gene: f64) -> f64{
+    assert!(scope.0 < scope.1);
+    (scope.0 as f64) + (((scope.1-scope.0) as f64)*gene)
 }
 
 
@@ -70,16 +75,14 @@ pub fn get_fct_by_name(name: &str) -> Result<BenchmarkFct, &'static str>{
 
 
 
-/*              BENCHMARKING FUNCTIONS              */
-//TODO Add more benchmarking functions
-fn coordinates_to_gene(scope: FctScope, coordinate: f64) -> f64{
-    coordinate/((scope.1 - scope.0) as f64)
-}
 
-fn coordinates_from_gene(scope: FctScope, gene: f64) -> f64{
-    assert!(scope.0 < scope.1);
-    (scope.0 as f64) + (((scope.1-scope.0) as f64)*gene)
+
+
+trait MathFct{
+    fn calc(&self, inputs: &Genome) -> f64;
+    fn set_scope(&mut self, scope: FctScope);
 }
+//TODO Add more benchmarking functions
 
 //SPHERICAL
 #[derive(Copy, Clone)]
@@ -123,7 +126,6 @@ impl MathFct for XinSheYang1Fct{
         res
     }
 }
-
 impl XinSheYang1Fct{
     fn __gen_random(&self, rng: &mut ThreadRng) -> f64{
         rng.gen()
@@ -148,6 +150,16 @@ impl MathFct for XinSheYang2Fct{
         inputs.into_iter().map(|x| coordinates_from_gene(self.scope, *x).abs()).sum::<f64>() * (0.0 - inputs.into_iter().map(|x| (coordinates_from_gene(self.scope, *x).powf(2.0)).sin()).sum::<f64>()).exp()
     }
 }
+
+
+
+
+
+
+
+
+
+
 
 #[test]
 fn test_coordinate_transformation(){

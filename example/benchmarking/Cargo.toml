@@ -13,3 +13,4 @@ crate-type = ["cdylib"]
 petridish = {path = "../../"}
 serde_json = "1.0"
 rand = "0.8.3"
+paste = "1.0.5"
