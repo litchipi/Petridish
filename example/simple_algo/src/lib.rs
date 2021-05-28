@@ -33,10 +33,6 @@ impl Algo for TestAlgoA{
 
     }
 
-    fn get_genome_length(&self) -> usize{
-        2
-    }
-
     fn genome_from_json(&self, jsdata: JsonData) -> Genome{
         __genome_from_json(jsdata, &KEY_LIST.to_vec())
     }
@@ -89,10 +85,6 @@ impl Algo for TestAlgoB{
 
     }
 
-    fn get_genome_length(&self) -> usize{
-        2
-    }
-
     fn genome_from_json(&self, jsdata: JsonData) -> Genome{
         __genome_from_json(jsdata, &KEY_LIST.to_vec())
     }
@@ -128,6 +120,10 @@ pub struct TestCell{
 }
 
 impl Cell for TestCell{
+    fn get_genome_length() -> usize{
+        KEY_LIST.len()
+    }
+
     fn genome_version_adapt(genome: &Genome, version: u64) -> Genome{
         genome.clone()
     }
