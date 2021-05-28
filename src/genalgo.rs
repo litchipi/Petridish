@@ -1,27 +1,12 @@
-use std::sync::{Condvar, Mutex};
-use std::time::Instant;
-use std::cmp;
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::mem;
 use std::any::type_name;
-use log::{info, trace, warn};
-
-use rand::prelude::*;
 
 use crate::utils::cells_from_memory;
 use crate::errors::Errcode;
-use crate::dataset::{DatasetHandler, EmptyDataset};
+use crate::dataset::DatasetHandler;
 use crate::lab::*;
-use crate::genalgomethods;
-use crate::utils::{MeanCompute, JsonData};
-use crate::algo::{AlgoConfiguration, AlgoResult, Algo};
+use crate::utils::JsonData;
+use crate::algo::{AlgoConfiguration, AlgoResult};
 use crate::cell::{Genome, Cell};
-
-extern crate serde;
-use serde::{Serialize, Deserialize};
-
-
 
 type LabExport = Vec<(LabConfig, Vec<AlgoConfiguration>, Vec<AlgoResult>, Vec<Genome>)>;
 
@@ -49,11 +34,11 @@ impl<T: 'static + Cell> Genalgo<T>{
     }
 
     pub fn export_lab(&self) -> Result<JsonData, Errcode>{
-        let exports : LabExport = vec![];
+        let _exports : LabExport = vec![];
         Err(Errcode::NotImplemented("export_lab"))
     }
 
-    pub fn import_lab(&self, data: JsonData) -> Result<(), Errcode>{
+    pub fn import_lab(&self, _data: JsonData) -> Result<(), Errcode>{
         Err(Errcode::NotImplemented("import_lab"))
     }
 
@@ -83,7 +68,7 @@ impl<T: 'static + Cell> Genalgo<T>{
     pub fn apply_json_map(&mut self, jsdata: JsonData) -> Result<(), Errcode>{
         match serde_json::from_str::<Vec<AlgoConfiguration>>(&jsdata){
             Ok(map) => self.lab.apply_map(map)?,
-            Err(e) => return Err(Errcode::ValidationError("jsonmap")),
+            Err(_) => return Err(Errcode::ValidationError("jsonmap")),
         }
         Ok(())
     }

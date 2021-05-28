@@ -1,5 +1,4 @@
 #![deny(unsafe_code)]
-#![allow(dead_code, unused_variables, unused_imports)]
 
 pub mod genalgomethods;
 pub mod genalgo;
@@ -14,5 +13,4 @@ pub mod cell;
 pub mod py_iface;
 
 pub extern crate paste;
-#[macro_use]
 pub extern crate pyo3;

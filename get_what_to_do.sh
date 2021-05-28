@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-DIRS="./src/"
+DIRS="./src/ ./example/benchmarking/src/ ./example/simple_algo/src/"
 
 ADD_TAGS= #"IMPORTANT BUG"
 results=$(grep -rn "TODO" $DIRS|grep -v binaire|grep -v "venv"|grep -v "data/"|grep -v "get_what_to_do.sh")

@@ -4,7 +4,7 @@ pub type JsonData = String;
 
 use crate::cell::Cell;
 
-pub (crate) fn format_error(msg: &str, code: &str, add_data: serde_json::Value) -> JsonData {
+pub fn format_error(msg: &str, code: &str, add_data: serde_json::Value) -> JsonData {
     serde_json::to_string(&json!({
         "error":msg,
         "errcode":code,
@@ -14,10 +14,6 @@ pub (crate) fn format_error(msg: &str, code: &str, add_data: serde_json::Value) 
 
 pub fn cells_from_memory<T: Cell>(max_memory: usize) -> usize{
     ((max_memory as f64)/(mem::size_of::<T>() as f64)) as usize
-}
-
-fn get_object_size<T>() -> usize{
-    mem::size_of::<T>()
 }
 
 pub struct MeanCompute{
@@ -50,7 +46,7 @@ impl MeanComputeVec{
             sumweights: 0.0,
             result: {
                 let mut res = vec![];
-                for i in 0..nb{
+                for _ in 0..nb{
                     res.push(0.0);
                 }
                 res}
@@ -79,14 +75,14 @@ impl StddevComputeVec{
             count: 0,
             result: {
                 let mut res = vec![];
-                for i in 0..mean.len(){
+                for _ in 0..mean.len(){
                     res.push(0.0);
                 }
                 res
             },
             ex2: {
                 let mut res = vec![];
-                for i in 0..mean.len(){
+                for _ in 0..mean.len(){
                     res.push(0.0);
                 }
                 res

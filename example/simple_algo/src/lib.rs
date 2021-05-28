@@ -1,6 +1,4 @@
 #![allow(unused_variables)]
-//TODO  IMPORTANT Find a way to import macros from dependencies of generate_py_ifaces in the scope
-//TODO  IMPORTANT Import missing dependencies for generate_py_ifaces
 
 use petridish::generate_py_ifaces;
 use petridish::cell::*;
@@ -149,11 +147,3 @@ impl Cell for TestCell{
 generate_py_ifaces!(petridish,
     [test] TestCell => (A => TestAlgoA, B => TestAlgoB),
 );
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}

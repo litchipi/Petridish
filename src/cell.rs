@@ -1,8 +1,10 @@
 use crate::utils::JsonData;
 use crate::dataset::GenalgoData;
+
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use rand::prelude::*;
+
 pub type Genome = Vec<f64>;
 
 pub fn random_genome(ngens: usize) -> Genome{
@@ -36,7 +38,7 @@ pub fn __genome_to_json(genome: Genome, key_list: &Vec<&str>) -> JsonData{
 
 pub type Score = f64;
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CellData{
     pub genome: Genome,
     pub score: Score,
@@ -44,6 +46,7 @@ pub struct CellData{
 }
 
 pub trait Cell{
+    fn get_genome_length() -> usize;
     fn get_data(&self) -> &CellData;
     fn action(&mut self, data: &GenalgoData);
     fn reset(&mut self, genome: &Genome);

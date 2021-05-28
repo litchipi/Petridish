@@ -1,7 +1,6 @@
 use crate::lab::Lab;
 use crate::utils::JsonData;
 use crate::errors::Errcode;
-use crate::genalgo::Genalgo;
 use crate::dataset::GenalgoData;
 use crate::cell::{Genome, CellData, Cell};
 
@@ -13,8 +12,7 @@ pub trait Algo{
     
     fn genome_from_json(&self, jsdata: JsonData) -> Genome;
     fn genome_to_json(&self, genome: Genome) -> JsonData;
-    fn get_genome_length(&self) -> usize;
-    
+
     fn initialize_cells(&mut self, pop: &mut Vec<Self::CellType>);
     fn create_cell_from_genome(&self, genome: &Genome) -> Self::CellType;
 
@@ -30,8 +28,9 @@ pub type AlgoID = usize;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AlgoConfiguration{
+    //TODO  Add genalgo method here, as string (will use registered genalgo method)
     pub give:           Vec<AlgoID>,        // Algos to give best cell
-    pub impr_genes:      Option<Vec<usize>>, // Index of genes to improve
+    pub impr_genes:     Option<Vec<usize>>, // Index of genes to improve
     pub weight_in_pop:  f64                 // Part of the population (in weight)
 }
 

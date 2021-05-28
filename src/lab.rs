@@ -1,11 +1,8 @@
-use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use rand::prelude::*;
 
 use crate::errors::Errcode;
 use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethod, GenalgoMethodsConfigurations, load_default_config};
-use crate::genalgo::Genalgo;
-use crate::dataset::{GenalgoData, DatasetHandler};
+use crate::dataset::DatasetHandler;
 use crate::utils::JsonData;
 use crate::cell::{Genome, random_genome, Cell};
 use crate::algo::{Algo, AlgoConfiguration, AlgoID, AlgoResult};
@@ -15,7 +12,7 @@ pub struct LabConfig{
     pub npop:           usize,
     pub elite_ratio:    f64,
     pub maximize_score: bool,
-    genalgo_method: GenalgoMethodsAvailable,
+    genalgo_method: GenalgoMethodsAvailable,    //TODO  Remove genalgo method here, migrate to per-algo parameter
     pub (crate) genalgo_method_config: GenalgoMethodsConfigurations,
 }
 
@@ -38,7 +35,7 @@ impl LabConfig{
         }
     }
 
-    pub fn from_json(js: JsonData) -> Result<LabConfig, Errcode>{
+    pub fn from_json(_js: JsonData) -> Result<LabConfig, Errcode>{
         //TODO  Implement LabConfig from JsonData
         Ok(LabConfig::default())
     }
@@ -92,7 +89,7 @@ impl<T: 'static + Cell> Lab<T>{
 
     pub fn register_new_algo(&mut self, algo: Box<dyn Algo<CellType = T>>) -> Result<AlgoID, Errcode> {
         self.configs.push(AlgoConfiguration{give:vec![], impr_genes: Option::None, weight_in_pop: 0.0});
-        self.bestgens.push(random_genome(algo.get_genome_length()));
+        self.bestgens.push(random_genome(T::get_genome_length()));
         self.cells.push(vec![]);
         self.algos.push(algo);
         Ok(self.algos.len() - 1)
@@ -203,7 +200,6 @@ impl<T: 'static + Cell> Lab<T>{
         self.method.process_results(
             &res.get_elites(),
             &res.cells_data,
-            self.algos.get(id).unwrap(),
             &mut genomes
         )?;
 
@@ -226,7 +222,6 @@ impl<T: 'static + Cell> Lab<T>{
             self.method.init_method(
                 self.bestgens.get(id).unwrap(),
                 pop as u32, elite as u32,
-                self.algos.get(id).unwrap(),
                 &mut genomes)?;
 
             for gene in genomes.iter(){
@@ -260,7 +255,7 @@ impl<T: 'static + Cell> Lab<T>{
         Ok(())
     }
 
-    fn __validate_map(&self, map: &Vec<AlgoConfiguration>) -> bool{
+    fn __validate_map(&self, _map: &Vec<AlgoConfiguration>) -> bool{
         true    //TODO  Implement Algo map validation
     }
 }
