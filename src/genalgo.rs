@@ -13,7 +13,6 @@ use crate::utils::cells_from_memory;
 use crate::errors::Errcode;
 use crate::dataset::{DatasetHandler, EmptyDataset};
 use crate::lab::*;
-use crate::builtin_algos;
 use crate::genalgomethods;
 use crate::utils::{MeanCompute, JsonData};
 use crate::algo::{AlgoConfiguration, AlgoResult, Algo};
@@ -91,20 +90,5 @@ impl<T: 'static + Cell> Genalgo<T>{
 
     pub fn start(&mut self, ngeneration:usize) -> Result<(), Errcode>{
         self.lab.start(ngeneration, &mut self.datasets)
-    }
-}
-
-use crate::builtin_algos::algo_test;
-pub type GenalgoTest = Genalgo<algo_test::TestCell>;
-
-#[test]
-pub fn test_genalgo(){
-    let labconfig = LabConfig::default();
-    let mut genalgo = GenalgoTest::new(labconfig);
-    genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(3)));
-    if let Ok(()) = genalgo.start(1){
-        assert!(true);
-    }else{
-        assert!(false);
     }
 }
