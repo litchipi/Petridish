@@ -6,7 +6,7 @@ use crate::dataset::DatasetHandler;
 use crate::lab::*;
 use crate::utils::JsonData;
 use crate::algo::{AlgoConfiguration, AlgoResult};
-use crate::cell::{Genome, Cell};
+use crate::cell::{Genome, Cell, CellData};
 
 type LabExport = Vec<(LabConfig, Vec<AlgoConfiguration>, Vec<AlgoResult>, Vec<Genome>)>;
 
@@ -50,6 +50,7 @@ impl<T: 'static + Cell> Genalgo<T>{
     pub fn register_dataset(&mut self, id: String, dataset: Box<dyn DatasetHandler>){
         self.datasets.push(dataset);
         self.datasets_id.push(id);
+        println!("{}", self.datasets.len());
     }
 
     pub fn remove_dataset(&mut self, id: String) -> Result<(), Errcode>{
@@ -73,7 +74,10 @@ impl<T: 'static + Cell> Genalgo<T>{
         Ok(())
     }
 
-    pub fn start(&mut self, ngeneration:usize) -> Result<(), Errcode>{
+    pub fn start(&mut self, ngeneration:usize) -> Result<CellData, Errcode>{
         self.lab.start(ngeneration, &mut self.datasets)
     }
+
+    //TODO  Send send_special_data / recv_special_data external API & bind with py_iface
+    //          Then impl for benchmarking functions, & try
 }

@@ -3,6 +3,7 @@ use crate::cell::{Cell, Genome, CellData};
 use crate::utils::JsonData;
 
 use serde::{Serialize, Deserialize};
+use strum_macros::{EnumString, EnumIter};
 
 mod darwin_method;
 
@@ -18,7 +19,7 @@ pub trait GenalgoMethod<T: Cell>{
 }
 
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize, EnumIter, EnumString, strum_macros::ToString)]
 pub enum GenalgoMethodsAvailable{
     Darwin
 }
@@ -42,13 +43,15 @@ impl GenalgoMethodsAvailable{
     }
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug)]
 pub enum GenalgoMethodsConfigurations{
     DarwinConfig(darwin_method::DarwinMethodConfiguration)
 }
 
-pub fn load_default_config(method: GenalgoMethodsAvailable) -> GenalgoMethodsConfigurations{
-    match method{
-        GenalgoMethodsAvailable::Darwin => GenalgoMethodsConfigurations::DarwinConfig(darwin_method::darwin_default_config()),
+impl GenalgoMethodsConfigurations{
+    pub fn default(method: GenalgoMethodsAvailable) -> GenalgoMethodsConfigurations{
+        match method{
+            GenalgoMethodsAvailable::Darwin => GenalgoMethodsConfigurations::DarwinConfig(darwin_method::DarwinMethodConfiguration::default()),
+        }
     }
 }

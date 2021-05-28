@@ -13,7 +13,7 @@ macro_rules! generate_py_ifaces {
         use $petridish::errors::Errcode;
         use $petridish::dataset::EmptyDataset;
         use $petridish::cell::Cell;
-        use $petridish::algo::Algo;
+        use $petridish::algo::{AlgoConfiguration, Algo};
 
         $(
             paste!{
@@ -33,14 +33,23 @@ macro_rules! generate_py_ifaces {
 
                 #[pymethods]
                 impl [<Lab $name PyIface>]{
-                    pub fn start(&mut self, ngen: usize){
-                        self.genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(3)));
+
+                    pub fn start(&mut self, ngen: usize) -> (Vec<f64>, f64){
                         let ret = self.genalgo.start(ngen);
-                        println!("genalgo finished");
-                        if let Err(e) = ret{
-                            println!("Error");
-                            println!("{}", e);
+                        match ret{
+                            Err(e) => {
+                                println!("Error");
+                                println!("{}", e);
+                                return (vec![], 0.0);
+                            },
+                            Ok(c) => {
+                                return (c.genome, c.score);
+                            }
                         }
+                    }
+
+                    pub fn register_empty_dataset(&mut self, ndata: usize){
+                        self.genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(ndata)));
                     }
 
                     pub fn apply_map(&mut self, map: JsonData){
@@ -53,12 +62,31 @@ macro_rules! generate_py_ifaces {
                     }
 
                     $(
-                        pub fn [<register_algo_ $algoname>](&mut self){
-                            if let Err(e) = self.genalgo.lab.register_new_algo(Box::new(<$algotype as Algo>::new())){
-                                println!("Error: {}", e);
+                        pub fn [<register_algo_ $algoname>](&mut self) -> i32{
+                            match self.genalgo.lab.register_new_algo(Box::new(<$algotype as Algo>::new())){
+                                Err(e) => {
+                                    println!("Error: {}", e);
+                                    return -1;
+                                },
+                                Ok(ind) => ind as i32,
                             }
                         }
                     )*
+
+                    pub fn configure_algo(&mut self, ind: usize, conf: JsonData){
+                        println!("Configuring algorithm {}: {}", ind, conf);
+                        if let Err(e) = self.genalgo.lab.configure_algo(ind, 
+                            match AlgoConfiguration::from_json(conf){
+                                Ok(j) => j,
+                                Err(e) => {
+                                    println!("Error: {}", e);
+                                    return;
+                                },
+                            }
+                        ){
+                            println!("Error: {}", e);
+                        }
+                    }
                 }
 
                 #[pyfunction]
@@ -81,9 +109,19 @@ macro_rules! generate_py_ifaces {
             }
         }
 
+        #[pyfunction]
+        pub fn get_algo_default() -> JsonData{
+            match AlgoConfiguration::default().to_json(){
+                Ok(d) => d,
+                Err(e) => {println!("Error: {}", e);
+                    return "".to_string(); }
+            }
+        }
+
         #[pymodule]
         fn genalgo(_py: Python, m: &PyModule) -> PyResult<()> {
             m.add_function(wrap_pyfunction!(get_lab_default, m)?).unwrap();
+            m.add_function(wrap_pyfunction!(get_algo_default, m)?).unwrap();
             $(
                 paste! {
                     m.add_function(wrap_pyfunction!([<create_lab_ $name>], m)?).unwrap();

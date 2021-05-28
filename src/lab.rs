@@ -1,11 +1,14 @@
-use serde::{Serialize, Deserialize};
-
 use crate::errors::Errcode;
-use crate::genalgomethods::GenalgoMethod;
+use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethod};
 use crate::dataset::DatasetHandler;
-use crate::utils::JsonData;
-use crate::cell::{Genome, random_genome, Cell};
+use crate::utils::{JsonData, MeanCompute};
+use crate::cell::{Genome, random_genome, Cell, CellData};
 use crate::algo::{Algo, AlgoConfiguration, AlgoID, AlgoResult};
+
+use std::time::SystemTime;
+use std::str::FromStr;
+use strum::IntoEnumIterator;
+use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct LabConfig{
@@ -41,7 +44,7 @@ impl LabConfig{
 pub struct Lab<T: Cell>{
     genalgo_methods:    Vec<Box<dyn GenalgoMethod<T>>>,
 
-    algos:      Vec<Box<dyn Algo<CellType = T>>>,
+    pub algos:      Vec<Box<dyn Algo<CellType = T>>>,
     configs:    Vec<AlgoConfiguration>,
     bestgens:   Vec<Genome>,
     cells:      Vec<Vec<T>>,
@@ -49,11 +52,13 @@ pub struct Lab<T: Cell>{
     out_algo:   Option<AlgoID>,     //Algo from which getting the result
     config:     LabConfig,
     init_done:  bool,
+    algo_configs_set: bool,
+
+    mean_calc:  MeanCompute,
 }
 
 impl<T: 'static + Cell> Lab<T>{
     pub fn new(config: LabConfig) -> Lab<T>{
-        println!("New lab");
         Lab {
             genalgo_methods: vec![],
 
@@ -65,6 +70,8 @@ impl<T: 'static + Cell> Lab<T>{
             out_algo:   Option::None,
             config:     config,
             init_done:  false,
+            algo_configs_set: false,
+            mean_calc:  MeanCompute::new(),
         }
     }
 
@@ -72,15 +79,14 @@ impl<T: 'static + Cell> Lab<T>{
         if self.algos.len() != map.len(){
             return Err(Errcode::SizeError("map", self.algos.len(), map.len()))
         }
-        if !self.__validate_map(&map){
-            return Err(Errcode::ValidationError("map"));
-        }
+        self.__validate_map(&map)?;
         self.configs = map.clone();
+        self.algo_configs_set = true;
         Ok(())
     }
 
     pub fn register_new_algo(&mut self, algo: Box<dyn Algo<CellType = T>>) -> Result<AlgoID, Errcode> {
-        self.configs.push(AlgoConfiguration{give:vec![], impr_genes: Option::None, weight_in_pop: 0.0, method: String::from("")});
+        self.configs.push(AlgoConfiguration::default());
         self.bestgens.push(random_genome(T::get_genome_length()));
         self.cells.push(vec![]);
         self.algos.push(algo);
@@ -91,10 +97,11 @@ impl<T: 'static + Cell> Lab<T>{
         self.__check_id_exist(id)?;
         let old_config = self.configs[id].clone();
         self.configs[id] = config;
-        if !self.__validate_map(&self.configs){
+        if let Err(e) = self.__validate_map(&self.configs){
             self.configs[id] = old_config;
-            return Err(Errcode::ValidationError("map"));
+            return Err(e);
         }
+        self.algo_configs_set = true;
         Ok(())
     }
 
@@ -129,14 +136,17 @@ impl<T: 'static + Cell> Lab<T>{
         Ok(self.algos[id].send_special_data(params))
     }
 
-    pub fn start(&mut self, ngeneration: usize, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<(), Errcode>{
-        println!("Starting lab");
+    pub fn start(&mut self, ngeneration: usize, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<CellData, Errcode>{
         self.__validate_configuration()?;
         self.__init_lab()?;
+        let mut top_cell: Option<CellData> = Option::None;
         for _ in 0..ngeneration{
-            self.__loop_gen(datasets)?;
+            let t = SystemTime::now();
+            top_cell = Some(self.__loop_gen(datasets)?);
+            self.mean_calc.add_el(t.elapsed().unwrap().as_secs_f64(), 1.0);
+            //println!("avg generation time: {}", self.mean_calc.result);
         }
-        Ok(())
+        Ok(top_cell.unwrap())
     }
 
 
@@ -144,12 +154,32 @@ impl<T: 'static + Cell> Lab<T>{
 
 
     /*              INTERNALS               */
-    fn get_method_from_algo(&self, _algoid: AlgoID) -> Result<Box<dyn GenalgoMethod<T>>, Errcode>{
-        Err(Errcode::NotImplemented("get_method_from_algo"))
+    fn get_method_from_algo(&mut self, algoid: AlgoID) -> Result<&mut Box<dyn GenalgoMethod<T>>, Errcode>{
+        let method_enum_n = match self.configs.get(algoid) {
+            Some(cfg) => {
+                if let Ok(m) = GenalgoMethodsAvailable::from_str(&cfg.method){
+                    m as usize
+                } else {
+                    return Err(Errcode::CodeError("get_method_from_algo from_str"));
+                }
+            },
+            None => return Err(Errcode::IdDoesntExist(algoid)),
+        };
+        match self.genalgo_methods.get_mut(method_enum_n){
+            Some(m) => Ok(m),
+            None => return Err(Errcode::CodeError("get_method_from_algo genalgo_methods get_mut")),
+        }
+
     }
 
-    fn __loop_gen(&mut self, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<(), Errcode>{
-        println!("Loop gen");
+    fn __init_genalgo_methods(&mut self) -> Result<(), Errcode>{
+        for method in GenalgoMethodsAvailable::iter(){
+            self.genalgo_methods.push(method.build());
+        }
+        Ok(())
+    }
+
+    fn __loop_gen(&mut self, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<CellData, Errcode>{
         for dataset in datasets.iter_mut(){
             self.__run_on_dataset(dataset)?;
         }
@@ -158,13 +188,17 @@ impl<T: 'static + Cell> Lab<T>{
         for id in 0..self.algos.len(){
             results.push(AlgoResult::new(self.configs.get(id).unwrap().get_pop_and_elite(self.config.npop, self.config.elite_ratio).1));
         }
+        let mut top_cell : Option<CellData> = Option::None;
         for id in 0..self.algos.len(){
             results[id].load_cells(self.cells.get(id).unwrap());
             results[id].sort_cells(self.config.maximize_score)?;
+            if id == self.out_algo.unwrap(){
+                top_cell = Some(results[id].cells_data[0].clone());
+            }
             self.__propagate_results(id, &mut results)?;
             self.__prepare_next_gen(id, &results[id])?;
         }
-        Ok(())
+        Ok(top_cell.unwrap())
     }
 
     fn __run_on_dataset(&mut self, dataset: &mut Box<dyn DatasetHandler>) -> Result<(), Errcode>{
@@ -193,10 +227,6 @@ impl<T: 'static + Cell> Lab<T>{
 
     fn __prepare_next_gen(&mut self, id: AlgoID, res: &AlgoResult) -> Result<(), Errcode>{
         let mut genomes = vec![];
-        //Register methods
-        //self.algo.get(id)
-        //  -> get method id
-        //  -> self.methods.get(method_id).process_results( ... )
         self.get_method_from_algo(id)?.process_results(
             &res.get_elites(),
             &res.cells_data,
@@ -206,29 +236,35 @@ impl<T: 'static + Cell> Lab<T>{
         if genomes.len() != self.cells.get(id).unwrap().len(){
             return Err(Errcode::CodeError("prepare next gen: genome list len != nb cells"));
         }
-        for i in 0..genomes.len(){
-            self.cells.get_mut(id).unwrap().get_mut(i).unwrap().reset(genomes.get(i).unwrap());
+        if let Some(cells) = self.cells.get_mut(id){
+            for i in 0..genomes.len(){
+                cells.get_mut(i).unwrap().reset(genomes.get(i).unwrap());
+            }
+        } else {
+            return Err(Errcode::IdDoesntExist(id));
         }
         Ok(())
     }
 
     fn __init_lab(&mut self) -> Result<(), Errcode>{
-        println!("Init lab");
-        if self.init_done{ return Ok(()); }
+        if !self.algo_configs_set{ return Err(Errcode::NotSet("algos configuration")); }
+        if self.init_done {return Ok(()); }
+        self.__init_genalgo_methods()?;
         for id in 0..self.algos.len(){
             let mut genomes = vec![];
 
             let (pop, elite) = self.configs.get(id).unwrap().get_pop_and_elite(self.config.npop, self.config.elite_ratio);
+
+            let bestgens = self.bestgens.get(id).unwrap().clone();
             self.get_method_from_algo(id)?.init_population(
-                self.bestgens.get(id).unwrap(),
-                pop as u32, elite as u32,
-                &mut genomes)?;
+                &bestgens, pop as u32, elite as u32, &mut genomes)?;
 
             for gene in genomes.iter(){
                 self.cells.get_mut(id).unwrap().push(self.algos.get(id).unwrap().create_cell_from_genome(gene));
             }
             self.algos.get_mut(id).unwrap().initialize_cells(self.cells.get_mut(id).unwrap());
         }
+        self.init_done = true;
         Ok(())
     }
 
@@ -238,8 +274,6 @@ impl<T: 'static + Cell> Lab<T>{
     }
 
     fn __validate_configuration(&mut self) -> Result<(), Errcode>{
-        println!("Validate configuration");
-        println!("Lab config: {}", self.config.to_json().unwrap());
         if self.config.npop < 100                   { return Err(Errcode::InsuffisantPopulation(self.config.npop, 100)); }
         //TODO  Check if the sum of all algos = total population
         if self.algos.len() == 0                    { return Err(Errcode::NotSet("lab algorithms")); }
@@ -250,14 +284,27 @@ impl<T: 'static + Cell> Lab<T>{
         if self.cells.len() != self.algos.len()     { return Err(Errcode::CodeError("populations len != algos len")) }
         if self.configs.len() != self.bestgens.len(){ return Err(Errcode::CodeError("configs len != bestgens len")) }
 
-        println!("Lab configuration validated");
         for method in self.genalgo_methods.iter(){
             method.validate_config()?;
         }
         Ok(())
     }
 
-    fn __validate_map(&self, _map: &Vec<AlgoConfiguration>) -> bool{
-        true    //TODO  Implement Algo map validation
+    fn __validate_map(&self, map: &Vec<AlgoConfiguration>) -> Result<(), Errcode>{
+        for cfg in map.iter(){
+            if let Err(_) = GenalgoMethodsAvailable::from_str(&cfg.method){
+                return Err(Errcode::ValidationError("genalgo method"));
+            }
+        }
+        Ok(())
+    }
+
+    fn __debug_fct(&self){
+        println!("Algos-related len: {} algos, {} configs, {} cells, {} bestgens", self.algos.len(), self.configs.len(), self.cells.len(), self.bestgens.len());
+        print!("Cells in algos: ");
+        for (n, c) in self.cells.iter().enumerate(){
+            print!("{}: {}, ", n, c.len());
+        }
+        println!("");
     }
 }

@@ -38,7 +38,7 @@ pub fn __genome_to_json(genome: Genome, key_list: &Vec<&str>) -> JsonData{
 
 pub type Score = f64;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CellData{
     pub genome: Genome,
     pub score: Score,

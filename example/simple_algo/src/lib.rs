@@ -7,7 +7,7 @@ use petridish::dataset::GenalgoData;
 
 use serde_json;
 
-const KEY_LIST: [&str; 2] = ["parameter1", "parameter2"];
+const KEY_LIST: [&str; 4] = ["parameter1", "parameter2", "parameter3", "parameter4"];
 
 #[derive(Clone)]
 pub struct TestAlgoA{
@@ -133,6 +133,13 @@ impl Cell for TestCell{
     }
 
     fn action(&mut self, data: &GenalgoData){
+        self.celldata.score = {
+            let mut res = 0.0;
+            for g in self.celldata.genome.iter(){
+                res += (g-0.5).abs();
+            }
+            res
+        };
     }
 
     fn reset(&mut self, genome: &Genome){

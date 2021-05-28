@@ -9,16 +9,18 @@ use crate::cell::{Cell, Genome, CellData};
 use serde::{Serialize, Deserialize};
 use std::marker::PhantomData;
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug)]
 pub struct DarwinMethodConfiguration{
     gene_reroll_proba: f64,
     optimization_ratio_epoch_shift: u32
 }
 
-pub fn darwin_default_config() -> DarwinMethodConfiguration{
-    DarwinMethodConfiguration {
-        gene_reroll_proba: 0.5,
-        optimization_ratio_epoch_shift: 3
+impl DarwinMethodConfiguration{
+    pub fn default() -> DarwinMethodConfiguration{
+        DarwinMethodConfiguration {
+            gene_reroll_proba: 0.5,
+            optimization_ratio_epoch_shift: 3
+        }
     }
 }
 
@@ -27,7 +29,7 @@ fn normal_random_vec(moy_vec: &Genome, stdev: &Genome, rng: &mut ThreadRng) -> G
     assert_eq!(moy_vec.len(), stdev.len());
     for n in 0..moy_vec.len(){
         res.push({
-            assert_ne!(stdev[n], f64::NAN);
+            assert!(!stdev[n].is_nan());
             let mut nb = Normal::new(moy_vec[n], stdev[n]).unwrap().sample(rng);
             while nb >= 1.0{
                 nb -= stdev[n];
@@ -58,7 +60,7 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
     fn new() -> Self where Self : Sized{
         DarwinMethod {
             epoch_last_new_best : 0,
-            config: darwin_default_config(),
+            config: DarwinMethodConfiguration::default(),
             _phantom: PhantomData,
         }
     }
@@ -105,8 +107,8 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
         
         let mut mean_elite = MeanComputeVec::new(elites[0].genome.len());
         for elite in elites.iter(){
-            assert!(elite.score < 1.0);
-            assert!(elite.score > 0.0);
+            assert!(elite.score <= 1.0);
+            assert!(elite.score >= 0.0);
             mean_elite.add_el(&elite.genome, elite.score)
         }
 
@@ -117,6 +119,7 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
 
         let parts_size = self.__compute_population_parts_sizes(elites.len(), optimization_ratio, (cells.len() -1) as u32);
         assert_eq!(parts_size.iter().sum::<u32>(), (cells.len()-1) as u32);
+        genomes.push(elites.get(0).unwrap().genome.clone());
         self.__generate_elite_childs(elites, genomes, optimization_ratio, &mut rng);
         self.__generate_elite_mutations(&elites, parts_size[1], genomes, optimization_ratio, &mut rng);
         self.__generate_random_elite_childs(cells, elites.len() as u32, parts_size[2], genomes, optimization_ratio, &mut rng);
@@ -127,8 +130,13 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
     }
 
     fn validate_config(&self) -> Result<(), Errcode>{
-        println!("Validation of Darwin config");
-        Err(Errcode::NotImplemented("Darwin validate config"))
+        if self.config.optimization_ratio_epoch_shift == 0{
+            return Err(Errcode::ValidationError("Darwin method: optimization_ratio_epoch_shift == 0"));
+        }
+        if (self.config.gene_reroll_proba > 1.0) || (self.config.gene_reroll_proba < 0.0){
+            return Err(Errcode::ValidationError("Darwin method: gene_reroll_proba not in range (0, 1)"));
+        }
+        Ok(())
     }
 }
 
@@ -146,6 +154,7 @@ impl<T: Cell> DarwinMethod<T>{
         let random_childs = ((sweep_part as f64)*0.25) as u32;
         let random_cells_norm = (((sweep_part-random_childs) as f64)*0.7) as u32;
         let random_cells = pop - opti_part - random_childs - random_cells_norm;
+        assert_eq!(elite_childs + elite_mutated + random_elite_child + random_childs + random_cells_norm + random_cells, pop);
         vec![elite_childs, elite_mutated, random_elite_child, random_childs, random_cells_norm, random_cells]
 
     }

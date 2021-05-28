@@ -3,6 +3,7 @@ use crate::utils::JsonData;
 use crate::errors::Errcode;
 use crate::dataset::GenalgoData;
 use crate::cell::{Genome, CellData, Cell};
+use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethodsConfigurations};
 
 use serde::{Serialize, Deserialize};
 
@@ -26,9 +27,10 @@ pub trait Algo{
 
 pub type AlgoID = usize;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AlgoConfiguration{
     pub method:         String,
+    pub method_options: GenalgoMethodsConfigurations,
     pub give:           Vec<AlgoID>,        // Algos to give best cell
     pub impr_genes:     Option<Vec<usize>>, // Index of genes to improve
     pub weight_in_pop:  f64                 // Part of the population (in weight)
@@ -42,8 +44,22 @@ impl AlgoConfiguration{
         )
     }
 
+    pub fn default() -> AlgoConfiguration{
+        AlgoConfiguration{
+            method: GenalgoMethodsAvailable::Darwin.to_string(),
+            method_options: GenalgoMethodsConfigurations::default(GenalgoMethodsAvailable::Darwin),
+            give: vec![],
+            impr_genes: None,
+            weight_in_pop: 1.0,
+        }
+    }
+
     pub fn from_json(jsdata: JsonData) -> Result<AlgoConfiguration, serde_json::Error>{
         serde_json::from_str(&jsdata)
+    }
+
+    pub fn to_json(&self) -> Result<JsonData, serde_json::Error>{
+        serde_json::to_string(&self)
     }
 }
 

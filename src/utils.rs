@@ -32,6 +32,11 @@ impl MeanCompute{
         self.sumweights += weight;
         res
     }
+
+    pub fn reset(&mut self){
+        self.sumweights = 0.0;
+        self.result = 0.0;
+    }
 }
 
 
@@ -55,7 +60,9 @@ impl MeanComputeVec{
 
     pub fn add_el(&mut self, element: &Vec<f64>, weight: f64){
         for i in 0..element.len(){
-            let res = ((self.result[i]*self.sumweights) + (element[i]*weight))/(self.sumweights+weight);
+            let res = if weight == 0.0 { 0.0 } else {
+                ((self.result[i]*self.sumweights) + (element[i]*weight))/(self.sumweights+weight)
+            };
             self.result[i] = res;
         }
         self.sumweights += weight;
