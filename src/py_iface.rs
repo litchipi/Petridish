@@ -1,19 +1,20 @@
-use crate::genalgo::Genalgo;
-use crate::lab::LabConfig;
-use crate::utils::JsonData;
-use crate::errors::Errcode;
-use crate::dataset::EmptyDataset;
-use crate::cell::Cell;
-use crate::algo::Algo;
-
-pub use paste::paste;
-pub use pyo3::prelude::*;
-pub use pyo3::{wrap_pyfunction, wrap_pymodule};
-pub use pyo3::Python;
-
 #[macro_export]
 macro_rules! generate_py_ifaces {
-    [$([$name:ident] $celltype:tt => ($($algoname:ident => $algotype:ty),+)),* $(,)?] => {
+    [$petridish:ident, $([$name:ident] $celltype:tt => ($($algoname:ident => $algotype:ty),+)),* $(,)?] => {
+        use $petridish::*;
+        use $petridish::paste::paste;
+        use $petridish::pyo3::prelude::*;
+        use $petridish::pyo3::{wrap_pymodule, wrap_pyfunction};
+        use $petridish::pyo3::Python;
+
+        use $petridish::genalgo::Genalgo;
+        use $petridish::lab::LabConfig;
+        use $petridish::utils::JsonData;
+        use $petridish::errors::Errcode;
+        use $petridish::dataset::EmptyDataset;
+        use $petridish::cell::Cell;
+        use $petridish::algo::Algo;
+
         $(
             paste!{
                 #[pyclass(unsendable, dict)]
@@ -95,10 +96,12 @@ macro_rules! generate_py_ifaces {
 
 //TODO IMPORTANT Migrate builtin_algos in separate exemples to be used
 
+/*
 use crate::builtin_algos::benchmark_fcts::{BenchmarkCell, BenchmarkAlgo};
 use crate::builtin_algos::algo_test::{TestCell, TestAlgo, TestAlgo2};
 
-generate_py_ifaces!(
+generate_py_ifaces!(crate,
     [test] TestCell => (test => TestAlgo, test2 => TestAlgo2),
     [benchmark] BenchmarkCell => (benchmark => BenchmarkAlgo),
 );
+*/
