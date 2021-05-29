@@ -36,6 +36,14 @@ class Plot(Thread):
             self.event.wait()
             self.update()
 
+#TODO   Clean this code, put as separate functions
+#       Make a python executable with cli args to try things
+#       Bench to test maps
+#           -> Interactive map creator
+#           -> Test how much iterations before getting a certain score
+#               OR
+#           -> Test score gotten after a certain number of iterations
+
 MATH_FCT = [
         "spherical",        # Optimisation OK
         "xinsheyang1",      # Optimisation OK

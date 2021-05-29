@@ -111,6 +111,7 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
         if self.last_best_cell.is_empty(){
             self.last_best_cell = cells[0].genome.clone();
         }
+
         let optimization_ratio: f64 = {
             let rgen : f64 = rng.gen();
             let res = (1.0 + self.epoch_last_new_best as f64) / ((1 + self.config.optimization_ratio_epoch_shift + self.epoch_last_new_best) as f64);
@@ -238,7 +239,8 @@ impl<T: Cell> DarwinMethod<T>{
 
     fn __give_birth(&self, p1: &CellData, p2: &CellData, _method: &BreedingMethod, rng: &mut ThreadRng) -> Genome{
         assert_eq!(p1.genome.len(), p2.genome.len());
-        //TODO  Use BreedingMethod enum
+        //TODO  Use BreedingMethod enum, taking care of getting good weight if maximization or
+        //minimization
         let mut genome = Genome::new();
         let sumscores : f64 = p1.score + p2.score;
         let part = (p1.score / sumscores, p2.score / sumscores);
