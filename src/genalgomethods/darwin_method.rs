@@ -45,6 +45,10 @@ fn normal_random_vec(moy_vec: &Genome, stdev: &Genome, rng: &mut ThreadRng) -> G
     res
 }
 
+fn __transform_score(bestscore: f64, cellscore: f64) -> f64{
+    cellscore.log(bestscore)
+}
+
 enum BreedingMethod{
     ScoreBasedAverage,
     ScoreBasedChoose
@@ -107,9 +111,7 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
         
         let mut mean_elite = MeanComputeVec::new(elites[0].genome.len());
         for elite in elites.iter(){
-            assert!(elite.score <= 1.0);
-            assert!(elite.score >= 0.0);
-            mean_elite.add_el(&elite.genome, elite.score)
+            mean_elite.add_el(&elite.genome, __transform_score(cells[0].score, elite.score))
         }
 
         let mut std_elite  = StddevComputeVec::new(mean_elite.result.clone());
