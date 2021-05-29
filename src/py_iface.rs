@@ -1,3 +1,4 @@
+//TODO  Change JsonData in/out to PyDict
 #[macro_export]
 macro_rules! generate_py_ifaces {
     [$petridish:ident, $([$name:ident] $celltype:tt => ($($algoname:ident => $algotype:ty),+)),* $(,)?] => {
@@ -13,7 +14,7 @@ macro_rules! generate_py_ifaces {
         use $petridish::errors::Errcode;
         use $petridish::dataset::EmptyDataset;
         use $petridish::cell::Cell;
-        use $petridish::algo::{AlgoConfiguration, Algo};
+        use $petridish::algo::{AlgoConfiguration, Algo, AlgoID};
 
         $(
             paste!{
@@ -38,13 +39,25 @@ macro_rules! generate_py_ifaces {
                         let ret = self.genalgo.start(ngen);
                         match ret{
                             Err(e) => {
-                                println!("Error");
-                                println!("{}", e);
+                                println!("Error: {}", e);
                                 return (vec![], 0.0);
                             },
                             Ok(c) => {
                                 return (c.genome, c.score);
                             }
+                        }
+                    }
+
+                    pub fn get_special_data(&mut self, id: AlgoID, data: JsonData) -> JsonData{
+                        match self.genalgo.send_special_data(id, data){
+                            Ok(d) => d,
+                            Err(e) => {println!("{}", e); "".to_string()},
+                        }
+                    }
+
+                    pub fn push_special_data(&mut self, id: AlgoID, data: JsonData){
+                        if let Err(e) = self.genalgo.recv_special_data(id, data){
+                            println!("{}", e);
                         }
                     }
 

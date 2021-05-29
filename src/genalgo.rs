@@ -5,7 +5,7 @@ use crate::errors::Errcode;
 use crate::dataset::DatasetHandler;
 use crate::lab::*;
 use crate::utils::JsonData;
-use crate::algo::{AlgoConfiguration, AlgoResult};
+use crate::algo::{AlgoConfiguration, AlgoResult, AlgoID};
 use crate::cell::{Genome, Cell, CellData};
 
 type LabExport = Vec<(LabConfig, Vec<AlgoConfiguration>, Vec<AlgoResult>, Vec<Genome>)>;
@@ -78,6 +78,19 @@ impl<T: 'static + Cell> Genalgo<T>{
         self.lab.start(ngeneration, &mut self.datasets)
     }
 
-    //TODO  Send send_special_data / recv_special_data external API & bind with py_iface
-    //          Then impl for benchmarking functions, & try
+    pub fn send_special_data(&mut self, id: AlgoID, jsdata: JsonData) -> Result<JsonData, Errcode>{
+        let data : serde_json::Value = match serde_json::from_str(&jsdata){
+            Ok(d) => d,
+            Err(e) => return Err(Errcode::JsonSerializationError(e)),
+        };
+        self.lab.send_special_data(id, &data)
+    }
+
+    pub fn recv_special_data(&mut self, id: AlgoID, jsdata: JsonData) -> Result<(), Errcode>{
+        let data : serde_json::Value = match serde_json::from_str(&jsdata){
+            Ok(d) => d,
+            Err(e) => return Err(Errcode::JsonSerializationError(e)),
+        };
+        self.lab.recv_special_data(id, &data)
+    }
 }
