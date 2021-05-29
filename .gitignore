@@ -3,3 +3,4 @@ Cargo.lock
 .*_ses
 *.so
 .backup
+smop
