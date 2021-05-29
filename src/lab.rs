@@ -197,6 +197,7 @@ impl<T: 'static + Cell> Lab<T>{
             }
             self.__propagate_results(id, &mut results)?;
             self.__prepare_next_gen(id, &results[id])?;
+            self.algos[id].reset();
         }
         Ok(top_cell.unwrap())
     }
