@@ -57,12 +57,16 @@ enum BreedingMethod{
 pub struct DarwinMethod<T: Cell>{
     epoch_last_new_best: u32,
     config: DarwinMethodConfiguration,
+    bestcell_avg: MeanComputeVec,
+    last_best_cell: Genome,
     _phantom: PhantomData<T>,
 }
 
 impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
     fn new() -> Self where Self : Sized{
         DarwinMethod {
+            last_best_cell: vec![],
+            bestcell_avg: MeanComputeVec::new(T::get_genome_length()),
             epoch_last_new_best : 0,
             config: DarwinMethodConfiguration::default(),
             _phantom: PhantomData,
@@ -96,12 +100,17 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
     fn process_results(&mut self, elites: &Vec<&CellData>, cells: &Vec<CellData>, genomes: &mut Vec<Genome>) -> Result<(), Errcode>{
         let mut rng = rand::thread_rng();
 
-        if cells[0].score != elites.get(0).unwrap().score{
+        if (!self.last_best_cell.is_empty()) & (cells[0].genome != self.last_best_cell){
             self.epoch_last_new_best = 0;
+            self.bestcell_avg.add_el(&cells[0].genome, 1.0);
+            self.last_best_cell = cells[0].genome.clone();
         }else{
             self.epoch_last_new_best += 1;
         }
 
+        if self.last_best_cell.is_empty(){
+            self.last_best_cell = cells[0].genome.clone();
+        }
         let optimization_ratio: f64 = {
             let rgen : f64 = rng.gen();
             let res = (1.0 + self.epoch_last_new_best as f64) / ((1 + self.config.optimization_ratio_epoch_shift + self.epoch_last_new_best) as f64);
@@ -119,9 +128,10 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
             std_elite.add_el(&elite.genome);
         }
 
-        let parts_size = self.__compute_population_parts_sizes(elites.len(), optimization_ratio, (cells.len() -1) as u32);
-        assert_eq!(parts_size.iter().sum::<u32>(), (cells.len()-1) as u32);
+        let parts_size = self.__compute_population_parts_sizes(elites.len(), optimization_ratio, (cells.len() - 2) as u32);
+        assert_eq!(parts_size.iter().sum::<u32>(), (cells.len()-2) as u32);
         genomes.push(elites.get(0).unwrap().genome.clone());
+        genomes.push(self.bestcell_avg.result.clone());
         self.__generate_elite_childs(elites, genomes, optimization_ratio, &mut rng);
         self.__generate_elite_mutations(&elites, parts_size[1], genomes, optimization_ratio, &mut rng);
         self.__generate_random_elite_childs(cells, elites.len() as u32, parts_size[2], genomes, optimization_ratio, &mut rng);
