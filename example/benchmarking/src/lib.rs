@@ -39,16 +39,14 @@ macro_rules! gen_celltype {
             impl Algo for [<BenchmarkAlgo $name>]{
                 type CellType = $name;
                 
-                //TODO init with null function (to be configured after)
                 fn new() -> Self where Self : Sized {
                     [<BenchmarkAlgo $name>] {
-                        fct_dimension: 0, //fct_dimension,
+                        fct_dimension: $ndim,
                         math_fct: BenchmarkFct::Nofct //fct
                     }
                 }
 
                 fn reset(&mut self){
-
                 }
 
                 fn send_special_data(&self, params: &serde_json::Value) -> JsonData{
@@ -62,16 +60,12 @@ macro_rules! gen_celltype {
                 }
 
                 fn recv_special_data(&mut self, data: &serde_json::Value){
-                    if data.get("scope") != Option::None{
-                        self.math_fct.set_scope((data["scope"][0].as_i64().expect("Unable to load scope value 0"), data["scope"][1].as_i64().expect("Unable to load scope value 1")));
-                    }
-
                     if data.get("mathfct") != Option::None{
                         self.math_fct = get_fct_by_name(data["mathfct"].as_str().unwrap()).unwrap();
                     }
 
-                    if data.get("nb_dimensions") != Option::None{
-                        self.fct_dimension = data["nb_dimensions"].as_u64().unwrap() as u8;
+                    if data.get("scope") != Option::None{
+                        self.math_fct.set_scope((data["scope"][0].as_i64().expect("Unable to load scope value 0"), data["scope"][1].as_i64().expect("Unable to load scope value 1")));
                     }
                 }
 
@@ -138,10 +132,11 @@ macro_rules! gen_celltype {
 
             fn action(&mut self, _data: &GenalgoData){
                 let mut f = self.math_fct.borrow_mut();
-                self.celldata.score = (f.get_minimum() - f.calc(&self.celldata.genome)).abs();
+                self.celldata.score += (f.get_minimum() - f.calc(&self.celldata.genome)).abs();
             }
             
             fn reset(&mut self, genome: &Genome){
+                self.celldata.score = 0.0;
                 self.celldata.genome = genome.clone();
             }
         }

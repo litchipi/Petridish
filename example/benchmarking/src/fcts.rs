@@ -1,5 +1,6 @@
 use petridish::cell::Genome;
 use rand::prelude::*;
+use rand_pcg::Pcg64;
 
 type FctScope = (i64, i64);
 
@@ -14,7 +15,7 @@ fn coordinates_from_gene(scope: FctScope, gene: f64) -> f64{
 }
 
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum BenchmarkFct{
     Nofct,
     Spherical(SphericalFct),
@@ -51,6 +52,7 @@ impl BenchmarkFct{
     }
 
     pub fn set_scope(&mut self, scope: FctScope){
+        println!("Setting scope for {:?}", self);
         match self {
             BenchmarkFct::Spherical(f) => f.set_scope(scope),
             BenchmarkFct::XinSheYang1(f) => f.set_scope(scope),
@@ -61,6 +63,7 @@ impl BenchmarkFct{
 }
 
 pub fn get_fct_by_name(name: &str) -> Result<BenchmarkFct, &'static str>{
+    println!("Getting fct by name {}", name);
     match name{
         "spherical" => Ok(BenchmarkFct::Spherical(SphericalFct::new())),
         "xinsheyang1" => Ok(BenchmarkFct::XinSheYang1(XinSheYang1Fct::new())),
@@ -85,7 +88,7 @@ trait MathFct{
 //TODO Add more benchmarking functions
 
 //SPHERICAL
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct SphericalFct {scope: FctScope}
 impl SphericalFct{
     fn new() -> SphericalFct{
@@ -105,7 +108,7 @@ impl MathFct for SphericalFct{
 
 
 // XinSheYang function n°1
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct XinSheYang1Fct {scope: FctScope}
 impl XinSheYang1Fct{
     fn new() -> XinSheYang1Fct{
@@ -118,23 +121,23 @@ impl MathFct for XinSheYang1Fct{
     }
 
     fn calc(&self, inputs: &Genome) -> f64{
-        let mut rng = rand::thread_rng();
         let mut res: f64 = 0.0;
+        let mut rng = Pcg64::from_entropy(); //seed_from_u64((x*100000000.0) as u64);
         for (n, x) in inputs.iter().enumerate(){
-            res += self.__gen_random(&mut rng)*coordinates_from_gene(self.scope, *x).abs().powf(n as f64)
+            res += self.__gen_random(&mut rng)*coordinates_from_gene(self.scope, *x).abs().powf((n+1) as f64)
         }
         res
     }
 }
 impl XinSheYang1Fct{
-    fn __gen_random(&self, rng: &mut ThreadRng) -> f64{
+    fn __gen_random(&self, rng: &mut Pcg64) -> f64{
         rng.gen()
     }
 }
 
 
 // XinSheYang function n°2
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct XinSheYang2Fct {scope: FctScope}
 impl XinSheYang2Fct{
     fn new() -> XinSheYang2Fct{
@@ -199,7 +202,7 @@ fn test_xinsheyang1_benchmarking_fct(){
     assert_eq!(fct.scope.0, -10);
     assert_eq!(fct.scope.1, 10);
 
-    for i in 0..100{
+    for _ in 0..100{
         assert_eq!(fct.calc(&vec![0.5, 0.5]), 0.0);
         assert_ne!(fct.calc(&vec![0.0, 0.0]), fct.calc(&vec![0.0, 0.0]));
     }
