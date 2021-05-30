@@ -1,5 +1,5 @@
 use crate::errors::Errcode;
-use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethod};
+use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethod, GenalgoMethodsConfigurations};
 use crate::dataset::DatasetHandler;
 use crate::utils::{JsonData, MeanCompute};
 use crate::cell::{Genome, random_genome, Cell, CellData};
@@ -158,21 +158,22 @@ impl<T: 'static + Cell> Lab<T>{
 
     /*              INTERNALS               */
     fn get_method_from_algo(&mut self, algoid: AlgoID) -> Result<&mut Box<dyn GenalgoMethod<T>>, Errcode>{
-        let method_enum_n = match self.configs.get(algoid) {
+        match self.configs.get(algoid) {
             Some(cfg) => {
-                if let Ok(m) = GenalgoMethodsAvailable::from_str(&cfg.method){
-                    m as usize
+                if let Ok(method_enum_n) = GenalgoMethodsAvailable::from_str(&cfg.method){
+                    match self.genalgo_methods.get_mut(method_enum_n as usize){
+                        Some(m) => {
+                            m.load_config(&cfg.method_options);
+                            Ok(m)
+                        },
+                        None => return Err(Errcode::CodeError("get_method_from_algo genalgo_methods get_mut")),
+                    }
                 } else {
                     return Err(Errcode::CodeError("get_method_from_algo from_str"));
                 }
             },
             None => return Err(Errcode::IdDoesntExist(algoid)),
-        };
-        match self.genalgo_methods.get_mut(method_enum_n){
-            Some(m) => Ok(m),
-            None => return Err(Errcode::CodeError("get_method_from_algo genalgo_methods get_mut")),
         }
-
     }
 
     fn __init_genalgo_methods(&mut self) -> Result<(), Errcode>{
