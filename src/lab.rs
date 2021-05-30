@@ -133,7 +133,10 @@ impl<T: 'static + Cell> Lab<T>{
 
     pub fn send_special_data(&self, id: AlgoID, params: &serde_json::Value) -> Result<JsonData, Errcode>{
         self.__check_id_exist(id)?;
-        Ok(self.algos[id].send_special_data(params))
+        match self.algos[id].send_special_data(params){
+            Ok(d) => Ok(d),
+            Err(e) => Err(Errcode::SpecialDataError(e)),
+        }
     }
 
     pub fn start(&mut self, ngeneration: usize, datasets: &mut Vec<Box<dyn DatasetHandler>>) -> Result<CellData, Errcode>{
