@@ -17,8 +17,8 @@ pub trait Algo{
     fn initialize_cells(&mut self, pop: &mut Vec<Self::CellType>);
     fn create_cell_from_genome(&self, genome: &Genome) -> Self::CellType;
 
-    fn recv_special_data(&mut self, data: &serde_json::Value);
-    fn send_special_data(&self, params: &serde_json::Value) -> JsonData;
+    fn recv_special_data(&mut self, data: &serde_json::Value) -> Result<(), JsonData>;
+    fn send_special_data(&self, params: &serde_json::Value) -> Result<JsonData, JsonData>;
 
     fn process_data(&mut self, pop: &mut Vec<Self::CellType>, data: &GenalgoData);
     fn check_generation_over(&self, genalgo: &Lab<Self::CellType>) -> bool;
