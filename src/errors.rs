@@ -1,6 +1,8 @@
 use std::fmt;
 use serde_json::Error;
 
+use crate::utils::JsonData;
+
 #[derive(Debug)]
 pub enum Errcode{
     NotImplemented(&'static str),
@@ -12,6 +14,7 @@ pub enum Errcode{
     SizeError(&'static str, usize, usize),        // Expected, Got
     ValidationError(&'static str),
     JsonSerializationError(Error),
+    SpecialDataError(JsonData),
 }
 
 impl fmt::Display for Errcode{
@@ -20,6 +23,7 @@ impl fmt::Display for Errcode{
             Errcode::NotSet(el) => write!(f, "Element \"{}\" not set", el),
             Errcode::SizeError(id, exp, got) => write!(f, "Size error for element \"{}\", expected {} got {}", id, exp, got),
             Errcode::ValidationError(el) => write!(f, "Error while validating element \"{}\"", el),
+            Errcode::SpecialDataError(d) => write!(f, "Error with special data handling: {}", d),
             _ =>  write!(f, "{:?}", self),
         }
     }
