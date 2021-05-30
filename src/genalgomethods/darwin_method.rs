@@ -12,14 +12,14 @@ use std::marker::PhantomData;
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]
 pub struct DarwinMethodConfiguration{
     gene_reroll_proba: f64,
-    optimization_ratio_epoch_shift: u32
+    exploration_scope_epoch_max: u32,
 }
 
 impl DarwinMethodConfiguration{
     pub fn default() -> DarwinMethodConfiguration{
         DarwinMethodConfiguration {
             gene_reroll_proba: 0.5,
-            optimization_ratio_epoch_shift: 3
+            exploration_scope_epoch_max: 3,
         }
     }
 }
@@ -49,6 +49,10 @@ enum BreedingMethod{
     ScoreBasedChoose
 }
 
+//TODO  Rewrite so it uses generic enums-backed implementation of mutation and breeding
+//TODO  Move out generic code into general functions in genalgomethods.rs
+//TODO  Clean code from esoteric tries, comment, improve general algorithm structure and lisibility
+
 pub struct DarwinMethod<T: Cell>{
     epoch_last_new_best: u32,
     config: DarwinMethodConfiguration,
@@ -76,7 +80,7 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
         self.epoch_last_new_best = 0;
     }
 
-    fn load_config(&mut self, cfg: GenalgoMethodsConfigurations){
+    fn load_config(&mut self, cfg: &GenalgoMethodsConfigurations){
         self.config = match cfg {
             GenalgoMethodsConfigurations::DarwinConfig(c) => c,
         }.clone();
@@ -107,11 +111,13 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
             self.last_best_cell = cells[0].genome.clone();
         }
 
-        let optimization_ratio: f64 = {
-            let rgen : f64 = rng.gen();
-            let res = (1.0 + self.epoch_last_new_best as f64) / ((1 + self.config.optimization_ratio_epoch_shift + self.epoch_last_new_best) as f64);
-            assert!(res.is_finite());
-            rgen*res
+        //TODO  Add to DarwinMethodConfiguration
+        let min_explo = 0.15;
+        let max_explo = 0.85;
+
+        let exploration_ratio: f64 = {
+            let max_ratio = (self.config.exploration_scope_epoch_max as f64)/((self.config.exploration_scope_epoch_max+self.epoch_last_new_best) as f64);
+            min_explo + (max_ratio*rng.gen::<f64>()*(max_explo-min_explo))
         };
         
         let mut mean_elite = MeanComputeVec::new(elites[0].genome.len());
@@ -124,22 +130,22 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
             std_elite.add_el(&elite.genome);
         }
 
-        let parts_size = self.__compute_population_parts_sizes(elites.len(), optimization_ratio, (cells.len() - 2) as u32);
+        let parts_size = self.__compute_population_parts_sizes(elites.len() as u32, exploration_ratio, (cells.len() - 2) as u32);
         assert_eq!(parts_size.iter().sum::<u32>(), (cells.len()-2) as u32);
         genomes.push(elites.get(0).unwrap().genome.clone());
         genomes.push(self.bestcell_avg.result.clone());
-        self.__generate_elite_childs(elites, genomes, optimization_ratio, &mut rng);
-        self.__generate_elite_mutations(&elites, parts_size[1], genomes, optimization_ratio, &mut rng);
-        self.__generate_random_elite_childs(cells, elites.len() as u32, parts_size[2], genomes, optimization_ratio, &mut rng);
-        self.__generate_random_pop_childs(cells, elites.len() as u32, parts_size[3], genomes, optimization_ratio, &mut rng);
+        self.__generate_elite_childs(elites, genomes, exploration_ratio, &mut rng);
+        self.__generate_elite_mutations(&elites, parts_size[1], genomes, exploration_ratio, &mut rng);
+        self.__generate_random_elite_childs(cells, elites.len() as u32, parts_size[2], genomes, exploration_ratio, &mut rng);
+        self.__generate_random_pop_childs(cells, elites.len() as u32, parts_size[3], genomes, exploration_ratio, &mut rng);
         self.__generate_norm_random_cells(parts_size[4], &mean_elite.result, &std_elite.result, genomes, &mut rng);
         self.__generate_random_cells(parts_size[5], genomes, &mut rng);
         Ok(())
     }
 
     fn validate_config(&self) -> Result<(), Errcode>{
-        if self.config.optimization_ratio_epoch_shift == 0{
-            return Err(Errcode::ValidationError("Darwin method: optimization_ratio_epoch_shift == 0"));
+        if self.config.exploration_scope_epoch_max == 0{
+            return Err(Errcode::ValidationError("Darwin method: exploration_scope_epoch_max == 0"));
         }
         if (self.config.gene_reroll_proba > 1.0) || (self.config.gene_reroll_proba < 0.0){
             return Err(Errcode::ValidationError("Darwin method: gene_reroll_proba not in range (0, 1)"));
@@ -148,22 +154,27 @@ impl<T: Cell> GenalgoMethod<T> for DarwinMethod<T>{
     }
 }
 
+pub fn get_part_of_pop(pop: u32, part: f64) -> u32{
+    ((pop as f64)*part) as u32
+}
+
 impl<T: Cell> DarwinMethod<T>{
-    fn __compute_population_parts_sizes(&self, nb_elites: usize, opt_ratio: f64, pop: u32) -> Vec<u32>{
-        let opti_part = ((pop as f64)*(0.25 + (opt_ratio*0.5))) as u32;
+    fn __compute_population_parts_sizes(&self, nb_elites: u32, exploration_ratio: f64, pop: u32) -> Vec<u32>{
+        let mut pop_rest = pop - (nb_elites-1);
 
         // OPTIMISATION PURPOSE
-        let elite_childs = (nb_elites-1) as u32;
-        let elite_mutated = (f64::from(opti_part-elite_childs)*0.5) as u32;
-        let random_elite_child = opti_part-elite_childs-elite_mutated;
+        let opti_pop = get_part_of_pop(pop_rest, 1.0-exploration_ratio);
+        let elite_mutated = get_part_of_pop(opti_pop, 0.6);
+        let random_elite_child = get_part_of_pop(opti_pop, 0.4);
 
-        // SWEEPING PURPOSE
-        let sweep_part = pop-opti_part;
-        let random_childs = ((sweep_part as f64)*0.25) as u32;
-        let random_cells_norm = (((sweep_part-random_childs) as f64)*0.7) as u32;
-        let random_cells = pop - opti_part - random_childs - random_cells_norm;
-        assert_eq!(elite_childs + elite_mutated + random_elite_child + random_childs + random_cells_norm + random_cells, pop);
-        vec![elite_childs, elite_mutated, random_elite_child, random_childs, random_cells_norm, random_cells]
+        // EXPLORATION PURPOSE
+        let explo_pop = pop_rest - opti_pop;
+        let random_childs = get_part_of_pop(explo_pop, 0.4);
+        let random_cells_norm = get_part_of_pop(explo_pop, 0.4);
+        let random_cells = pop_rest - elite_mutated - random_elite_child - random_childs - random_cells_norm;
+
+        assert_eq!((nb_elites-1) + elite_mutated + random_elite_child + random_childs + random_cells_norm + random_cells, pop);
+        vec![(nb_elites-1), elite_mutated, random_elite_child, random_childs, random_cells_norm, random_cells]
 
     }
 
@@ -252,35 +263,35 @@ impl<T: Cell> DarwinMethod<T>{
 
     /*          CELLS MANIPULATION          */
 
-    fn __generate_elite_childs(&self, elites: &Vec<&CellData>, genvec: &mut Vec<Genome>, opt_ratio : f64, rng: &mut ThreadRng){
+    fn __generate_elite_childs(&self, elites: &Vec<&CellData>, genvec: &mut Vec<Genome>, exploration_ratio : f64, rng: &mut ThreadRng){
         for i in 0..(elites.len() - 1){
             let mut child = self.__give_birth(elites.get(i).unwrap(), elites.get(i+1).unwrap(), &BreedingMethod::ScoreBasedChoose, rng);
-            self.mutate_genome(&mut child, (1.0-opt_ratio).powf(2.0), rng);
+            self.mutate_genome(&mut child, (1.0-exploration_ratio).powf(2.0), rng);
             genvec.push(child);
         }
     }
 
-    fn __generate_elite_mutations(&self, elites: &Vec<&CellData>, size: u32, genvec: &mut Vec<Genome>, opt_ratio : f64, rng: &mut ThreadRng){
+    fn __generate_elite_mutations(&self, elites: &Vec<&CellData>, size: u32, genvec: &mut Vec<Genome>, exploration_ratio : f64, rng: &mut ThreadRng){
         for _ in 0..size{
             let random_cell_nb = rng.gen_range(0..elites.len());
             let mut genome = elites[random_cell_nb as usize].genome.clone();
-            self.mutate_genome_direct(&mut genome, 1.0-opt_ratio, rng);
+            self.mutate_genome_direct(&mut genome, 1.0-exploration_ratio, rng);
             genvec.push(genome)
         }
     }
 
-    fn __generate_random_elite_childs(&self, cells: &Vec<CellData>, nb_elites: u32, size: u32, genvec: &mut Vec<Genome>, opt_ratio : f64, rng: &mut ThreadRng){
+    fn __generate_random_elite_childs(&self, cells: &Vec<CellData>, nb_elites: u32, size: u32, genvec: &mut Vec<Genome>, exploration_ratio : f64, rng: &mut ThreadRng){
         self.__generate_childs(cells,
             (0, nb_elites),
             (nb_elites, cells.len() as u32),
-            size, genvec, (1.0-opt_ratio).powf(2.0), rng, BreedingMethod::ScoreBasedAverage);
+            size, genvec, (1.0-exploration_ratio).powf(2.0), rng, BreedingMethod::ScoreBasedAverage);
     }
 
-    fn __generate_random_pop_childs(&self, cells: &Vec<CellData>, nb_elites: u32, size: u32, genvec: &mut Vec<Genome>, opt_ratio : f64, rng: &mut ThreadRng){
+    fn __generate_random_pop_childs(&self, cells: &Vec<CellData>, nb_elites: u32, size: u32, genvec: &mut Vec<Genome>, exploration_ratio : f64, rng: &mut ThreadRng){
         self.__generate_childs(cells,
             (nb_elites, cells.len() as u32),
             (nb_elites, cells.len() as u32),
-            size, genvec, 1.0-opt_ratio, rng, BreedingMethod::ScoreBasedChoose);
+            size, genvec, 1.0-exploration_ratio, rng, BreedingMethod::ScoreBasedChoose);
     }
 
     fn __generate_norm_random_cells(&self, size: u32, mean_elites: &Genome, stddev_elites: &Genome, genvec: &mut Vec<Genome>, rng: &mut ThreadRng){
