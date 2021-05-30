@@ -30,17 +30,12 @@ fn normal_random_vec(moy_vec: &Genome, stdev: &Genome, rng: &mut ThreadRng) -> G
     for n in 0..moy_vec.len(){
         res.push({
             assert!(!stdev[n].is_nan());
-            let mut nb = Normal::new(moy_vec[n], stdev[n]).unwrap().sample(rng);
-            while nb >= 1.0{
-                nb -= stdev[n];
-            }
-            while nb <= 0.0{
-                nb += stdev[n];
+            let mut nb = 0.0;
+            while (nb >= 1.0) || (nb <= 0.0){
+                nb = Normal::new(moy_vec[n], stdev[n]).unwrap().sample(rng);
             }
             nb
         });
-        assert!(res[n] >= 0.0);
-        assert!(res[n] <= 1.0);
     }
     res
 }
@@ -290,7 +285,7 @@ impl<T: Cell> DarwinMethod<T>{
 
     fn __generate_norm_random_cells(&self, size: u32, mean_elites: &Genome, stddev_elites: &Genome, genvec: &mut Vec<Genome>, rng: &mut ThreadRng){
         for _ in 0..size{
-            genvec.push(normal_random_vec(mean_elites, &stddev_elites, rng));
+            genvec.push(normal_random_vec(mean_elites, stddev_elites, rng));
         }
     }
 
