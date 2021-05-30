@@ -7,7 +7,7 @@ use petridish::lab::Lab;
 use petridish::dataset::GenalgoData;
 
 mod fcts;
-use fcts::*;
+use fcts::{build_fct, BenchmarkFct, Scope, MathFct};
 
 use serde_json::json;
 
@@ -18,7 +18,8 @@ macro_rules! gen_celltype {
             #[derive(Clone)]
             pub struct [<BenchmarkAlgo $name>]{
                 math_fct: BenchmarkFct,
-                fct_dimension: u8
+                fct_dimension: u8,
+                scope: Scope,
             }
 
             impl [<BenchmarkAlgo $name>]{
@@ -38,35 +39,48 @@ macro_rules! gen_celltype {
 
             impl Algo for [<BenchmarkAlgo $name>]{
                 type CellType = $name;
-                
+
                 fn new() -> Self where Self : Sized {
+                    let default_scope = (-5, 5);
                     [<BenchmarkAlgo $name>] {
                         fct_dimension: $ndim,
-                        math_fct: BenchmarkFct::Nofct //fct
+                        scope: default_scope,
+                        math_fct: build_fct("spherical", default_scope).unwrap(),
                     }
                 }
 
                 fn reset(&mut self){
                 }
 
-                fn send_special_data(&self, params: &serde_json::Value) -> JsonData{
+                fn send_special_data(&self, params: &serde_json::Value) -> Result<JsonData, JsonData>{
                     if params.get("method") == Option::None{
-                        format_error("Please specify method name", "BSD1", json!({}));
+                        return Err(format_error("Please specify method name", "BSD1", json!({})));
                     }
                     match params["method"].as_str().expect("Cannot unwrap method as str") {
-                        "expected_optimum" => self.__get_expected_optimum(params),
-                        _ => format_error("method not recognized", "BSD2", json!(["expected_optimum"]))
+                        "expected_optimum" => Ok(self.__get_expected_optimum(params)),
+                        _ => Err(format_error("method not recognized", "BSD2", json!(["expected_optimum"])))
                     }
                 }
 
-                fn recv_special_data(&mut self, data: &serde_json::Value){
+                fn recv_special_data(&mut self, data: &serde_json::Value) -> Result<(), JsonData>{
                     if data.get("mathfct") != Option::None{
-                        self.math_fct = get_fct_by_name(data["mathfct"].as_str().unwrap()).unwrap();
+                        self.math_fct = build_fct(data["mathfct"].as_str().unwrap(), self.scope).unwrap();      //TODO  Handle error case
                     }
 
                     if data.get("scope") != Option::None{
-                        self.math_fct.set_scope((data["scope"][0].as_i64().expect("Unable to load scope value 0"), data["scope"][1].as_i64().expect("Unable to load scope value 1")));
+                        self.scope = ({
+                            match data["scope"][0].as_i64(){
+                                Some(v) => v,
+                                None => return Err(format_error("Scope field MIN cannot be converted", "BSD3", json!({}))),
+                            }
+                        }, {
+                            match data["scope"][1].as_i64(){
+                                Some(v) => v,
+                                None => return Err(format_error("Scope field MAX cannot be converted", "BSD4", json!({}))),
+                            }
+                        });
                     }
+                    Ok(())
                 }
 
                 fn genome_from_json(&self, _jsdata: JsonData) -> Genome{
@@ -80,7 +94,7 @@ macro_rules! gen_celltype {
                 fn create_cell_from_genome(&self, genome: &Genome) -> Self::CellType{
                     $name {
                         celldata: CellData { genome: genome.clone(), score: 0.0, version:1},
-                        math_fct: RefCell::new(self.math_fct)
+                        math_fct: self.math_fct.clone()
                     }
                 }
 
@@ -89,9 +103,6 @@ macro_rules! gen_celltype {
                 }
 
                 fn initialize_cells(&mut self, pop: &mut Vec<Self::CellType>){
-                    if let BenchmarkFct::Nofct = self.math_fct {
-                        panic!("No math function was set up before initialisation");
-                    }
                     for cell in pop.iter_mut(){
                         cell.set_math_fct(self.math_fct);
                     }
@@ -108,12 +119,12 @@ macro_rules! gen_celltype {
         #[derive(Clone)]
         pub struct $name{
             celldata: CellData,
-            math_fct: RefCell<BenchmarkFct>
+            math_fct: BenchmarkFct,
         }
 
         impl $name{
             fn set_math_fct(&mut self, fct: BenchmarkFct){
-                self.math_fct = RefCell::new(fct);
+                self.math_fct = fct.clone();
             }
         }
 
@@ -131,8 +142,7 @@ macro_rules! gen_celltype {
             }
 
             fn action(&mut self, _data: &GenalgoData){
-                let mut f = self.math_fct.borrow_mut();
-                self.celldata.score += (f.get_minimum() - f.calc(&self.celldata.genome)).abs();
+                self.celldata.score += (self.math_fct.get_minimum(Self::get_genome_length() as u8) - self.math_fct.calc(&self.celldata.genome)).abs();
             }
             
             fn reset(&mut self, genome: &Genome){

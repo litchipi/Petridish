@@ -6,7 +6,7 @@ import json
 
 from threading import Event, Thread
 
-NPOP = 10000
+NPOP = 1000000
 UPDATE_GEN_NB = 100
 NDATA = 1
 NDIM = 5
@@ -47,8 +47,12 @@ class Plot(Thread):
 MATH_FCT = [
         "spherical",        # Optimisation OK
         "xinsheyang1",      # Optimisation OK
-        "xinsheyang2"       # Find only local minimums      #TODO   Find a fix
+        "xinsheyang2",      # Find only local minimums      #TODO   Find a fix
+        "schwefel220",
+        "styblinski_tank",
+        "quartic"
         ]
+
 MINIMUM = [0.5, 0.5, 0.5]
 
 choose_msg = "Choose between math functions:\n"
@@ -65,14 +69,18 @@ algo_ind = obj.register_algo_benchmark()
 
 algo_config = json.loads(genalgo.get_algo_default())
 algo_config["method_options"]["DarwinConfig"]["optimization_ratio_epoch_shift"] = 1000
+print(algo_config)
 algo_config["method_options"]["DarwinConfig"]["gene_reroll_proba"] = 0.3
 print(algo_config)
 obj.configure_algo(algo_ind, json.dumps(algo_config))
 
 obj.register_empty_dataset(NDATA)
-obj.push_special_data(algo_ind, json.dumps({"mathfct":MATH_FCT[math_fct_nb], "scope":[-2, 2]}))
-d = obj.get_special_data(algo_ind, json.dumps({"method":"expected_optimum", "scope":[-2, 2]}))
+obj.push_special_data(algo_ind, json.dumps({"mathfct":MATH_FCT[math_fct_nb], "scope":[-5, 5]}))
+d = obj.get_special_data(algo_ind, json.dumps({"method":"expected_optimum", "scope":[-5, 5]}))
+
 print(d)
+MIN_COORD = json.loads(d)["result"]
+print(MIN_COORD)
 input("Enter to start")
 
 plot = Plot()
@@ -85,7 +93,7 @@ try:
         print("\nGeneration {}".format(i))
         print("Best genome:      \t", g)
         print("Best score:       \t", s)
-        print("Dist from minimum:\t", sum([abs(x-MINIMUM[math_fct_nb]) for x in g]))
+        print("Dist from minimum:\t", sum([abs(x-MIN_COORD[n]) for n, x in enumerate(g)]))
         plot.scores.append(s)
         plot.event.set()
 finally:

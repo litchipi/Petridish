@@ -2,73 +2,60 @@ use petridish::cell::Genome;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-type FctScope = (i64, i64);
+use enum_dispatch::enum_dispatch;
+
+pub type Scope = (i64, i64);
 
 /*              BENCHMARKING FUNCTIONS              */
-fn coordinates_to_gene(scope: FctScope, coordinate: f64) -> f64{
-    coordinate/((scope.1 - scope.0) as f64)
+fn coordinates_to_gene(scope: Scope, coordinate: f64) -> f64{
+    assert!(scope.0 < scope.1);
+    assert!(coordinate >= (scope.0 as f64));
+    assert!(coordinate <= (scope.1 as f64));
+    (coordinate - (scope.0 as f64))/((scope.1 - scope.0) as f64)
 }
 
-fn coordinates_from_gene(scope: FctScope, gene: f64) -> f64{
+fn coordinates_from_gene(scope: Scope, gene: f64) -> f64{
     assert!(scope.0 < scope.1);
     (scope.0 as f64) + (((scope.1-scope.0) as f64)*gene)
 }
 
+//TODO  Automate build from stringified struct name
+pub fn build_fct(name: &str, scope: Scope) -> Result<BenchmarkFct, &'static str>{
+    match name{
+        "spherical" => Ok(Spherical { scope }.into()), //Ok(BenchmarkFct::from(Spherical { scope })),
+        "xinsheyang1" => Ok(XinSheYang1 { scope }.into()), //Ok(BenchmarkFct::from(XinSheYang1 { scope })),
+        "xinsheyang2" => Ok(XinSheYang2 { scope }.into()), //Ok(BenchmarkFct::from(XinSheYang2 { scope })),
+        "schwefel220" => Ok(Schwefel220 { scope }.into()),
+        "styblinski_tank" => Ok(StyblinskiTank { scope }.into()),
+        "quartic" => Ok(Quartic { scope }.into()),
+        _ => Err("BenchmarkFct function not found")
+    }
+}
 
+
+#[enum_dispatch(BenchmarkFct)]
+pub trait MathFct{
+    fn calc(&self, inputs: &Genome) -> f64;
+    fn set_scope(&mut self, scope: Scope);
+    fn get_expected_optimum(&self, ndim: u8, scope: Scope) -> Vec<f64>;
+    fn get_minimum(&self, ndim: u8) -> f64;
+}
+
+//TODO Add more benchmarking functions
+#[enum_dispatch]
 #[derive(Copy, Clone, Debug)]
 pub enum BenchmarkFct{
-    Nofct,
-    Spherical(SphericalFct),
-    XinSheYang1(XinSheYang1Fct),
-    XinSheYang2(XinSheYang2Fct),
+    Spherical,
+    XinSheYang1,
+    XinSheYang2,
+    Schwefel220,
+    StyblinskiTank,
+    Quartic,
 }
 
 impl BenchmarkFct{
-    pub fn calc(&mut self, data: &Genome) -> f64 {
-        match self {
-            BenchmarkFct::Spherical(f) => f.calc(data),
-            BenchmarkFct::XinSheYang1(f) => f.calc(data),
-            BenchmarkFct::XinSheYang2(f) => f.calc(data),
-            _ => panic!("Function not set or recognized"),
-        }
-    }
-
-    pub fn get_expected_optimum(&self, ndim: u8, scope: FctScope) -> Vec<f64>{
-        match self {
-            BenchmarkFct::Spherical(_) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
-            BenchmarkFct::XinSheYang1(_) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
-            BenchmarkFct::XinSheYang2(_) => vec![coordinates_to_gene(scope, 0.0); ndim.into()],
-            _ => panic!("Function not set or recognized"),
-        }
-    }
-
-    pub fn get_minimum(&self) -> f64{
-        match self {
-            BenchmarkFct::Spherical(_) => 0.0,
-            BenchmarkFct::XinSheYang1(_) => 0.0,
-            BenchmarkFct::XinSheYang2(_) => 0.0,
-            _ => panic!("Function not set or recognized"),
-        }
-    }
-
-    pub fn set_scope(&mut self, scope: FctScope){
-        println!("Setting scope for {:?}", self);
-        match self {
-            BenchmarkFct::Spherical(f) => f.set_scope(scope),
-            BenchmarkFct::XinSheYang1(f) => f.set_scope(scope),
-            BenchmarkFct::XinSheYang2(f) => f.set_scope(scope),
-            _ => panic!("Function not set or recognized"),
-        }
-    }
-}
-
-pub fn get_fct_by_name(name: &str) -> Result<BenchmarkFct, &'static str>{
-    println!("Getting fct by name {}", name);
-    match name{
-        "spherical" => Ok(BenchmarkFct::Spherical(SphericalFct::new())),
-        "xinsheyang1" => Ok(BenchmarkFct::XinSheYang1(XinSheYang1Fct::new())),
-        "xinsheyang2" => Ok(BenchmarkFct::XinSheYang2(XinSheYang2Fct::new())),
-        _ => Err("Benchmark function not found")
+    pub fn default() -> BenchmarkFct{
+        build_fct("spherical", (-5, 5)).unwrap()
     }
 }
 
@@ -78,30 +65,26 @@ pub fn get_fct_by_name(name: &str) -> Result<BenchmarkFct, &'static str>{
 
 
 
-
-
-
-trait MathFct{
-    fn calc(&self, inputs: &Genome) -> f64;
-    fn set_scope(&mut self, scope: FctScope);
-}
-//TODO Add more benchmarking functions
 
 //SPHERICAL
 #[derive(Copy, Clone, Debug)]
-pub struct SphericalFct {scope: FctScope}
-impl SphericalFct{
-    fn new() -> SphericalFct{
-        SphericalFct { scope : (-5, 5) }
-    }
-}
-impl MathFct for SphericalFct{
-    fn set_scope(&mut self, scope: FctScope){
+pub struct Spherical {scope: Scope}
+
+impl MathFct for Spherical{
+    fn set_scope(&mut self, scope: Scope){
         self.scope = scope;
     }
 
     fn calc(&self, inputs: &Genome) -> f64{
         inputs.into_iter().map(|x| coordinates_from_gene(self.scope, *x).powf(2.0)).collect::<Vec<f64>>().iter().sum()
+    }
+    
+
+    fn get_expected_optimum(&self, ndim: u8, scope: Scope) -> Vec<f64>{
+        vec![coordinates_to_gene(scope, 0.0); ndim.into()]
+    }
+    fn get_minimum(&self, ndim: u8) -> f64{
+        0.0
     }
 }
 
@@ -109,14 +92,9 @@ impl MathFct for SphericalFct{
 
 // XinSheYang function n°1
 #[derive(Copy, Clone, Debug)]
-pub struct XinSheYang1Fct {scope: FctScope}
-impl XinSheYang1Fct{
-    fn new() -> XinSheYang1Fct{
-        XinSheYang1Fct { scope : (-5, 5) }
-    }
-}
-impl MathFct for XinSheYang1Fct{
-    fn set_scope(&mut self, scope: FctScope){
+pub struct XinSheYang1 {scope: Scope}
+impl MathFct for XinSheYang1{
+    fn set_scope(&mut self, scope: Scope){
         self.scope = scope;
     }
 
@@ -124,39 +102,146 @@ impl MathFct for XinSheYang1Fct{
         let mut res: f64 = 0.0;
         let mut rng = Pcg64::from_entropy(); //seed_from_u64((x*100000000.0) as u64);
         for (n, x) in inputs.iter().enumerate(){
-            res += self.__gen_random(&mut rng)*coordinates_from_gene(self.scope, *x).abs().powf((n+1) as f64)
+            res += rng.gen::<f64>()*coordinates_from_gene(self.scope, *x).abs().powf((n+1) as f64);
         }
         res
     }
-}
-impl XinSheYang1Fct{
-    fn __gen_random(&self, rng: &mut Pcg64) -> f64{
-        rng.gen()
+
+    fn get_expected_optimum(&self, ndim: u8, scope: Scope) -> Vec<f64>{
+        vec![coordinates_to_gene(scope, 0.0); ndim.into()]
+    }
+
+    fn get_minimum(&self, ndim: u8) -> f64{
+        0.0
     }
 }
+
 
 
 // XinSheYang function n°2
 #[derive(Copy, Clone, Debug)]
-pub struct XinSheYang2Fct {scope: FctScope}
-impl XinSheYang2Fct{
-    fn new() -> XinSheYang2Fct{
-        XinSheYang2Fct { scope : (-5, 5) }
-    }
-}
-impl MathFct for XinSheYang2Fct{
-    fn set_scope(&mut self, scope: FctScope){
+pub struct XinSheYang2 {scope: Scope}
+impl MathFct for XinSheYang2{
+    fn set_scope(&mut self, scope: Scope){
         self.scope = scope;
     }
 
     fn calc(&self, inputs: &Genome) -> f64{
         inputs.into_iter().map(|x| coordinates_from_gene(self.scope, *x).abs()).sum::<f64>() * (0.0 - inputs.into_iter().map(|x| (coordinates_from_gene(self.scope, *x).powf(2.0)).sin()).sum::<f64>()).exp()
     }
+
+    fn get_expected_optimum(&self, ndim: u8, scope: Scope) -> Vec<f64>{
+        vec![coordinates_to_gene(scope, 0.0); ndim.into()]
+    }
+
+    fn get_minimum(&self, ndim: u8) -> f64{
+        0.0
+    }
 }
 
 
 
+// Schwefel220
+#[derive(Copy, Clone, Debug)]
+pub struct Schwefel220 {scope: Scope}
+impl MathFct for Schwefel220{
+    fn set_scope(&mut self, scope: Scope){
+        self.scope = scope;
+    }
 
+    fn calc(&self, inputs: &Genome) -> f64{
+        inputs.into_iter().map(|x| coordinates_from_gene(self.scope, *x).abs()).sum()
+    }
+
+    fn get_expected_optimum(&self, ndim: u8, scope: Scope) -> Vec<f64>{
+        vec![coordinates_to_gene(scope, 0.0); ndim.into()]
+    }
+
+    fn get_minimum(&self, ndim: u8) -> f64{
+        0.0
+    }
+}
+
+
+
+// StyblinskiTank
+#[derive(Copy, Clone, Debug)]
+pub struct StyblinskiTank {scope: Scope}
+impl MathFct for StyblinskiTank{
+    fn set_scope(&mut self, scope: Scope){
+        self.scope = scope;
+    }
+
+    fn calc(&self, inputs: &Genome) -> f64{
+        let mut scores = 0.0;
+        for g in inputs.iter(){
+            let x = coordinates_from_gene(self.scope, *g);
+            scores += x.powf(4.0) - (16.0*x.powf(2.0)) + (5.0*x);
+        }
+        scores / 2.0
+    }
+
+    fn get_expected_optimum(&self, ndim: u8, scope: Scope) -> Vec<f64>{
+        vec![coordinates_to_gene(scope, -2.903534); ndim.into()]
+    }
+
+    fn get_minimum(&self, ndim: u8) -> f64{
+        -39.16599*(ndim as f64)
+    }
+}
+
+// Quartic
+#[derive(Copy, Clone, Debug)]
+pub struct Quartic {scope: Scope}
+impl MathFct for Quartic {
+    fn set_scope(&mut self, scope: Scope){
+        self.scope = scope;
+    }
+
+    fn calc(&self, inputs: &Genome) -> f64{
+        let mut res: f64 = 0.0;
+        let mut rng = Pcg64::seed_from_u64(inputs.into_iter().map(|x| (x*10000000.0) as u64).sum());
+        for (n, x) in inputs.iter().enumerate(){
+            res += ((n+1) as f64)*coordinates_from_gene(self.scope, *x).powf(4.0);
+        }
+        let rand_nb = rng.gen::<f64>();
+        res + rand_nb
+    }
+    
+    fn get_expected_optimum(&self, ndim: u8, scope: Scope) -> Vec<f64>{
+        vec![coordinates_to_gene(scope, 0.0); ndim.into()]
+    }
+
+    fn get_minimum(&self, ndim: u8) -> f64{
+        let mut rng = Pcg64::seed_from_u64(0);
+        rng.gen::<f64>()
+    }
+}
+
+/*  TEMPLATE
+
+// Name
+#[derive(Copy, Clone, Debug)]
+pub struct Name {scope: Scope}
+impl MathFct for Name {
+    fn set_scope(&mut self, scope: Scope){
+        self.scope = scope;
+    }
+
+    fn calc(&self, inputs: &Genome) -> f64{
+        0.0
+    }
+
+    fn get_expected_optimum(&self, ndim: u8, scope: Scope) -> Vec<f64>{
+        vec![coordinates_to_gene(scope, 0.0); ndim.into()]
+    }
+
+    fn get_minimum(&self, ndim: u8) -> f64{
+        0.0
+    }
+}
+
+*/
 
 
 
