@@ -37,7 +37,6 @@ pub trait GenalgoMethod<T: Cell> {
     fn validate_config(&self) -> Result<(), Errcode>;
 }
 
-//TODO IMPORTANT Replace with enum_derive type
 #[derive(Copy, Clone, Serialize, Deserialize, EnumIter, EnumString, strum_macros::ToString)]
 pub enum GenalgoMethodsAvailable {
     RandomOpti,
@@ -46,7 +45,7 @@ pub enum GenalgoMethodsAvailable {
 
 impl GenalgoMethodsAvailable {
     //TODO IMPORTANT Replace with method from string to get enum
-    pub fn get_by_name(name: String) -> Option<GenalgoMethodsAvailable> {
+    pub fn get_by_name(name: &String) -> Option<GenalgoMethodsAvailable> {
         match name.as_str() {
             "Darwin" => Some(GenalgoMethodsAvailable::Darwin),
             "RandomOpti" => Some(GenalgoMethodsAvailable::RandomOpti),

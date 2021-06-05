@@ -64,6 +64,20 @@ impl AlgoConfiguration {
         }
     }
 
+    pub fn method_default(method: String) -> Option<AlgoConfiguration> {
+        Some(AlgoConfiguration {
+            method_options: GenalgoMethodsConfigurations::default(
+                match GenalgoMethodsAvailable::get_by_name(&method) {
+                    Some(m) => m,
+                    None => return None,
+                }),
+            give: vec![],
+            method: method,
+            impr_genes: None,
+            population: AlgoPopulation::WeightofTot(1.0),
+        })
+    }
+
     pub fn from_json(jsdata: JsonData) -> Result<AlgoConfiguration, serde_json::Error> {
         serde_json::from_str(&jsdata)
     }
