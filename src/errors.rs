@@ -32,3 +32,10 @@ impl fmt::Display for Errcode {
         }
     }
 }
+
+
+impl From<serde_json::Error> for Errcode {
+    fn from(obj: serde_json::Error) -> Errcode{
+        Errcode::JsonSerializationError(obj)
+    }
+}
