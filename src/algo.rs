@@ -1,16 +1,18 @@
+use crate::cell::{Cell, CellData, Genome};
+use crate::dataset::GenalgoData;
+use crate::errors::Errcode;
+use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethodsConfigurations};
 use crate::lab::Lab;
 use crate::utils::JsonData;
-use crate::errors::Errcode;
-use crate::dataset::GenalgoData;
-use crate::cell::{Genome, CellData, Cell};
-use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethodsConfigurations};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-pub trait Algo{
-    type CellType : Cell;
-    fn new() -> Self where Self : Sized;
-    
+pub trait Algo {
+    type CellType: Cell;
+    fn new() -> Self
+    where
+        Self: Sized;
+
     fn genome_from_json(&self, jsdata: JsonData) -> Genome;
     fn genome_to_json(&self, genome: Genome) -> JsonData;
 
@@ -27,82 +29,102 @@ pub trait Algo{
 
 pub type AlgoID = usize;
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct AlgoConfiguration{
-    pub method:         String,
-    pub method_options: GenalgoMethodsConfigurations,
-    pub give:           Vec<AlgoID>,        // Algos to give best cell
-    pub impr_genes:     Option<Vec<usize>>, // Index of genes to improve
-    pub weight_in_pop:  f64                 // Part of the population (in weight)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum AlgoPopulation{
+    WeightofTot(f64),
+    FixedSize(usize),
 }
 
-impl AlgoConfiguration{
-    pub fn get_pop_and_elite(&self, pop: usize, elite_ratio: f64) -> (usize, usize){
-        (
-            ((pop as f64)*self.weight_in_pop) as usize,
-            (((pop as f64)*self.weight_in_pop)*elite_ratio) as usize,
-        )
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct AlgoConfiguration {
+    pub method: String,
+    pub method_options: GenalgoMethodsConfigurations,
+    pub give: Vec<AlgoID>,              // Algos to give best cell
+    pub impr_genes: Option<Vec<usize>>, // Index of genes to improve
+    pub population: AlgoPopulation,
+    //TODO  IMPORTANT   Add Vec of objectives (score_index, maximize / minimize)
+}
+
+impl AlgoConfiguration {
+    pub fn get_pop_and_elite(&self, pop: usize, elite_ratio: f64) -> (usize, usize) {
+        let algopop = match self.population{
+                AlgoPopulation::WeightofTot(w) => ((pop as f64) * w) as usize,
+                AlgoPopulation::FixedSize(s) => s,
+        };
+        (algopop, ((algopop as f64) * elite_ratio) as usize)
     }
 
-    pub fn default() -> AlgoConfiguration{
-        AlgoConfiguration{
+    pub fn default() -> AlgoConfiguration {
+        AlgoConfiguration {
             method: GenalgoMethodsAvailable::Darwin.to_string(),
             method_options: GenalgoMethodsConfigurations::default(GenalgoMethodsAvailable::Darwin),
             give: vec![],
             impr_genes: None,
-            weight_in_pop: 1.0,
+            population: AlgoPopulation::WeightofTot(1.0),
         }
     }
 
-    pub fn from_json(jsdata: JsonData) -> Result<AlgoConfiguration, serde_json::Error>{
+    pub fn from_json(jsdata: JsonData) -> Result<AlgoConfiguration, serde_json::Error> {
         serde_json::from_str(&jsdata)
     }
 
-    pub fn to_json(&self) -> Result<JsonData, serde_json::Error>{
+    pub fn to_json(&self) -> Result<JsonData, serde_json::Error> {
         serde_json::to_string(&self)
     }
 }
 
-pub struct AlgoResult{
+pub struct AlgoResult {
     pub cells_data: Vec<CellData>,
     pub exterior_elites: Vec<CellData>,
-    nelite: usize
+    nelite: usize,
 }
 
-impl AlgoResult{
-    pub fn new(nelite: usize) -> AlgoResult{
-        AlgoResult{
+impl AlgoResult {
+    pub fn new(nelite: usize) -> AlgoResult {
+        AlgoResult {
             cells_data: vec![],
             exterior_elites: vec![],
             nelite: nelite,
         }
     }
 
-    pub fn load_cells<T: Cell>(&mut self, cells: &Vec<T>){
-        self.cells_data.extend(cells.iter().map(|c| c.get_data().clone()).collect::<Vec<CellData>>());
+    pub fn load_cells<T: Cell>(&mut self, cells: &Vec<T>) {
+        self.cells_data.extend(
+            cells
+                .iter()
+                .map(|c| c.get_data().clone())
+                .collect::<Vec<CellData>>(),
+        );
     }
 
-    pub fn sort_cells(&mut self, maximize: bool) -> Result<(), Errcode>{
-        if maximize{
-            self.cells_data.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
-        }else{
-            self.cells_data.sort_by(|a, b| a.score.partial_cmp(&b.score).unwrap());
+    pub fn sort_cells(&mut self, maximize: bool) -> Result<(), Errcode> {
+        if maximize {
+            self.cells_data
+                .sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+        } else {
+            self.cells_data
+                .sort_by(|a, b| a.score.partial_cmp(&b.score).unwrap());
         }
         Ok(())
     }
 
-    pub fn get_elites(&self) -> Vec<&CellData>{
+    pub fn get_elites(&self) -> Vec<&CellData> {
         let mut res = vec![];
-        for i in 0..self.nelite{
+        for i in 0..self.nelite {
             res.push(self.cells_data.get(i).unwrap());
         }
-        res.extend(self.exterior_elites.iter().map(|e| e).collect::<Vec<&CellData>>());
+        res.extend(
+            self.exterior_elites
+                .iter()
+                .map(|e| e)
+                .collect::<Vec<&CellData>>(),
+        );
         res
     }
 
-    pub fn clone_top_cells(&self) -> Vec<CellData>{
+    pub fn clone_top_cells(&self) -> Vec<CellData> {
         let mut res = vec![];
-        for i in 0..self.nelite{
+        for i in 0..self.nelite {
             res.push(self.cells_data.get(i).unwrap().clone());
         }
         res

@@ -8,6 +8,12 @@ edition = "2018"
 name = "petridish"
 crate-type = ["cdylib", "rlib"]
 
+[profile.release]		# Optimisation in size
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = 'abort'
+
 [dependencies]
 serde = {version = "1.0.118", features = ["derive"]}
 serde_json = "1.0"
@@ -18,9 +24,4 @@ paste = "1.0.5"
 pyo3 = "0.13.2"
 strum = "0.20.0"
 strum_macros = "0.20.0"
-
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-panic = 'abort'
+enum_dispatch = "0.3.7"

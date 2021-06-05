@@ -1,7 +1,9 @@
 //TODO  Change JsonData in/out to PyDict
+
 #[macro_export]
 macro_rules! generate_py_ifaces {
-    [$petridish:ident, $([$name:ident] $celltype:tt => ($($algoname:ident => $algotype:ty),+)),* $(,)?] => {
+    [$petridish:ident, $([$name:ident] $celltype:tt => ($($algoname:ident => $algotype:ty),+)),*
+        $(,)?] => {
         use $petridish::*;
         use $petridish::paste::paste;
         use $petridish::pyo3::prelude::*;
@@ -15,6 +17,8 @@ macro_rules! generate_py_ifaces {
         use $petridish::dataset::EmptyDataset;
         use $petridish::cell::Cell;
         use $petridish::algo::{AlgoConfiguration, Algo, AlgoID};
+        use $petridish::genalgomethods::GenalgoMethodsAvailable;
+        use $petridish::labmaps::LabMapAssistant;
 
         $(
             paste!{
@@ -62,7 +66,9 @@ macro_rules! generate_py_ifaces {
                     }
 
                     pub fn register_empty_dataset(&mut self, ndata: usize){
-                        self.genalgo.register_dataset(String::from("empty"), Box::new(EmptyDataset::new(ndata)));
+                        self.genalgo.register_dataset(String::from("empty"),
+                            Box::new(EmptyDataset::new(ndata))
+                            );
                     }
 
                     pub fn apply_map(&mut self, map: JsonData){
@@ -76,7 +82,9 @@ macro_rules! generate_py_ifaces {
 
                     $(
                         pub fn [<register_algo_ $algoname>](&mut self) -> i32{
-                            match self.genalgo.lab.register_new_algo(Box::new(<$algotype as Algo>::new())){
+                            match self.genalgo.lab.register_new_algo(
+                                Box::new(<$algotype as Algo>::new())
+                                ){
                                 Err(e) => {
                                     println!("Error: {}", e);
                                     return -1;
@@ -88,7 +96,7 @@ macro_rules! generate_py_ifaces {
 
                     pub fn configure_algo(&mut self, ind: usize, conf: JsonData){
                         println!("Configuring algorithm {}: {}", ind, conf);
-                        if let Err(e) = self.genalgo.lab.configure_algo(ind, 
+                        if let Err(e) = self.genalgo.lab.configure_algo(ind,
                             match AlgoConfiguration::from_json(conf){
                                 Ok(j) => j,
                                 Err(e) => {
@@ -131,9 +139,45 @@ macro_rules! generate_py_ifaces {
             }
         }
 
+        #[pyfunction]
+        pub fn create_labmap_assistant(
+            mapformat_str: String,
+            isomethod_str: String,
+            mixmethod_str: String,
+            bundlemethod_str: String,
+            finalmethod_str: String,
+        ) -> LabMapAssistant {
+            let isomethod = py_err_if_none!(
+                GenalgoMethodsAvailable::get_by_name(isomethod_str),
+                "Wrong iso method"
+            );
+            let mixmethod = py_err_if_none!(
+                GenalgoMethodsAvailable::get_by_name(mixmethod_str),
+                "Wrong mix method"
+            );
+            let bundlemethod = py_err_if_none!(
+                GenalgoMethodsAvailable::get_by_name(bundlemethod_str),
+                "Wrong bundle method"
+            );
+            let finalmethod = py_err_if_none!(
+                GenalgoMethodsAvailable::get_by_name(finalmethod_str),
+                "Wrong final method"
+            );
+
+            LabMapAssistant::new(
+                mapformat_str,
+                isomethod,
+                mixmethod,
+                bundlemethod,
+                finalmethod,
+            )
+        }
+        //TODO  Function raise Python error
+
         #[pymodule]
         fn genalgo(_py: Python, m: &PyModule) -> PyResult<()> {
             m.add_function(wrap_pyfunction!(get_lab_default, m)?).unwrap();
+            m.add_function(wrap_pyfunction!(create_labmap_assistant, m)?).unwrap();
             m.add_function(wrap_pyfunction!(get_algo_default, m)?).unwrap();
             $(
                 paste! {
@@ -143,4 +187,21 @@ macro_rules! generate_py_ifaces {
             Ok(())
         }
     };
+}
+
+#[macro_export]
+macro_rules! raise_python_error{
+    [$msg:expr] => {
+        panic!($msg)
+    }
+}
+
+#[macro_export]
+macro_rules! py_err_if_none{
+    [$x:expr, $msg:expr] => {
+        match $x{
+            Some(data) => data,
+            None => raise_python_error!($msg),
+        }
+    }
 }

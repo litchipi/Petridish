@@ -68,8 +68,8 @@ obj = create_lab_dim(NDIM, lab_options)
 algo_ind = obj.register_algo_benchmark()
 
 algo_config = json.loads(genalgo.get_algo_default())
-algo_config["method_options"]["DarwinConfig"]["optimization_ratio_epoch_shift"] = 1000
 print(algo_config)
+algo_config["method_options"]["DarwinConfig"]["exploration_scope_epoch_max"] = 10000
 algo_config["method_options"]["DarwinConfig"]["gene_reroll_proba"] = 0.3
 print(algo_config)
 obj.configure_algo(algo_ind, json.dumps(algo_config))
