@@ -85,6 +85,14 @@ impl<T: 'static + Cell> Genalgo<T> {
         Ok(())
     }
 
+    pub fn apply_map_with_algo<A: 'static + Algo<CellType=T>>(&mut self, jsdata: JsonData) -> Result<(), Errcode> {
+        match serde_json::from_str::<Vec<AlgoConfiguration>>(&jsdata) {
+            Ok(map) => self.lab.apply_map_with_algo::<A>(map)?,
+            Err(_) => return Err(Errcode::ValidationError("jsonmap")),
+        }
+        Ok(())
+    }
+
     pub fn start(&mut self, ngeneration: usize) -> Result<CellData, Errcode> {
         self.lab.start(ngeneration, &mut self.datasets)
     }
@@ -108,4 +116,9 @@ impl<T: 'static + Cell> Genalgo<T> {
         };
         self.lab.recv_special_data(id, &data)
     }
+
+    pub fn set_output_algorithm(&mut self, ind: AlgoID){
+        self.lab.out_algo = Some(ind);
+    }
+
 }
