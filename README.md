@@ -26,14 +26,16 @@ Are traits:
 - GenalgoMethod
 - MutationProcess (Work in progress)
 - BreedingMethod (Work in progress)
-- LabMapAssistant (Work in progress) *(tool to assist lab map creation)*
+- LabMapFormat *(Used to assist LabMap creation)*
 
 ## Implemented Optimisation methods
-- **Darwin** (Mix of technics, including CMA on elites and natural selection. Custom made for experiments)
-
+- **Darwin** (Mix of technics, including CMA on elites and natural selection.
+Custom made for experiments)
+- **RandOpti** (Get random genomes each generation, used for noise in LabMap)
 
 ## Implemented BboB functions
-On the code of `example/benchmarking/`, you can test the optimisation efficiency using Black-Box Optimisation Benchmark functions (BBOB).
+On the code of `example/benchmarking/`, you can test the optimisation efficiency using Black-Box
+Optimisation Benchmark functions (BBOB).
 The following functions are implemented: 
 - [Spheric function](http://benchmarkfcns.xyz/benchmarkfcns/spherefcn.html)
 - [Xin-She Yang 1 function](http://benchmarkfcns.xyz/benchmarkfcns/xinsheyangn1fcn.html)
@@ -41,5 +43,6 @@ The following functions are implemented:
 - [Schwefel 2.20 function](http://benchmarkfcns.xyz/benchmarkfcns/schwefel220fcn.html)
 - [Styblinski Tank function](http://benchmarkfcns.xyz/benchmarkfcns/styblinskitankfcn.html)
 - [Quartic function](http://benchmarkfcns.xyz/benchmarkfcns/quarticfcn.html)
-- 
-*A special thanks to [mazhar-ansari-ardeh](https://github.com/mazhar-ansari-ardeh) for his very high quality website about these functions*
+
+*A special thanks to [mazhar-ansari-ardeh](https://github.com/mazhar-ansari-ardeh) for his very high
+quality website about these functions*
