@@ -37,6 +37,7 @@ pub enum AlgoPopulation{
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AlgoConfiguration {
+    pub id: String,
     pub method: String,
     pub method_options: GenalgoMethodsConfigurations,
     pub give: Vec<AlgoID>,              // Algos to give best cell
@@ -56,6 +57,7 @@ impl AlgoConfiguration {
 
     pub fn default() -> AlgoConfiguration {
         AlgoConfiguration {
+            id: "Default".to_string(),
             method: GenalgoMethodsAvailable::Darwin.to_string(),
             method_options: GenalgoMethodsConfigurations::default(GenalgoMethodsAvailable::Darwin),
             give: vec![],
@@ -66,6 +68,7 @@ impl AlgoConfiguration {
 
     pub fn method_default(method: String) -> Option<AlgoConfiguration> {
         Some(AlgoConfiguration {
+            id: method.clone() + "_default",
             method_options: GenalgoMethodsConfigurations::default(
                 match GenalgoMethodsAvailable::get_by_name(&method) {
                     Some(m) => m,

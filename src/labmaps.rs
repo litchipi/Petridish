@@ -57,6 +57,7 @@ impl LabMapAssistant {
     pub fn add_opti_part(&mut self, id: String, genes_opt: Vec<usize>, priority: f64,
         method: String, method_cfg: JsonData) -> Result<(), Errcode>{
         self.iso_algos.push(AlgoConfiguration { 
+            id, method,
             method,
             method_options: GenalgoMethodsConfigurations::from_str(method_cfg)?,
             give: vec![],
@@ -75,6 +76,7 @@ impl LabMapAssistant {
 
 pub fn get_random_opti_algoconf() -> AlgoConfiguration {
     AlgoConfiguration {
+        id: "Random".to_string(),
         method: "RandomOpti".to_string(),
         method_options: GenalgoMethodsConfigurations::NoConfig,
         give: vec![],

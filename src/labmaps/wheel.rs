@@ -27,7 +27,9 @@ impl LabMapFormat for WheelFormat{
         }
 
         // Give the new best cell to every ISO
+        res[1].id = "Final".to_string();
         res[1].give = (start_ind..(start_ind+iso_algos.len())).collect();
+        res[0].id = "Random".to_string();
         self.to_json(res)
     }
 }
@@ -57,6 +59,7 @@ impl WheelFormat{
         priority: f64, method: String, output: usize) -> AlgoConfiguration {
         let mut algo = AlgoConfiguration::method_default(method).unwrap();
 
+        algo.id = format!("Mix_{}_{}", iso_a.id, iso_b.id);
         algo.impr_genes = Some(self.extract_impr_genes(isoA, isoB));
         algo.give = vec![output];
         algo
