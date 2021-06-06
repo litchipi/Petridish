@@ -25,12 +25,12 @@ impl Algo for TestAlgoA{
 
     }
 
-    fn send_special_data(&self, params: &serde_json::Value) -> JsonData{
-        String::from("")
+    fn send_special_data(&self, params: &serde_json::Value) -> Result<JsonData, String> {
+        Ok(String::from(""))
     }
 
-    fn recv_special_data(&mut self, data: &serde_json::Value){
-
+    fn recv_special_data(&mut self, data: &serde_json::Value) -> Result<(), String> {
+        Ok(())
     }
 
     fn genome_from_json(&self, jsdata: JsonData) -> Genome{
@@ -77,12 +77,12 @@ impl Algo for TestAlgoB{
 
     }
 
-    fn send_special_data(&self, params: &serde_json::Value) -> JsonData{
-        String::from("")
+    fn send_special_data(&self, params: &serde_json::Value) -> Result<JsonData, String> {
+        Ok(String::from(""))
     }
 
-    fn recv_special_data(&mut self, data: &serde_json::Value){
-
+    fn recv_special_data(&mut self, data: &serde_json::Value) -> Result<(), String> {
+        Ok(())
     }
 
     fn genome_from_json(&self, jsdata: JsonData) -> Genome{
