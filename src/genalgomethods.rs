@@ -5,6 +5,7 @@ use crate::utils::JsonData;
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumIter, EnumString};
 
+mod random_opti;
 mod darwin_method;
 
 //TODO  IMPORTANT       Create genome mutation method trait and child creation trait
@@ -37,7 +38,7 @@ pub trait GenalgoMethod<T: Cell> {
     fn validate_config(&self) -> Result<(), Errcode>;
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize, EnumIter, EnumString, strum_macros::ToString)]
+#[derive(Copy, Clone, Serialize, Debug, Deserialize, EnumIter, EnumString, strum_macros::ToString)]
 pub enum GenalgoMethodsAvailable {
     RandomOpti,
     Darwin,
@@ -56,7 +57,7 @@ impl GenalgoMethodsAvailable {
     pub fn build<T: 'static + Cell>(&self) -> Box<dyn GenalgoMethod<T>> {
         match self {
             GenalgoMethodsAvailable::Darwin => Box::new(darwin_method::DarwinMethod::new()),
-            _ => todo!(),
+            GenalgoMethodsAvailable::RandomOpti => Box::new(random_opti::RandomOpti::new()),
         }
     }
 
