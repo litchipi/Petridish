@@ -6,8 +6,8 @@ import json
 
 from threading import Event, Thread
 
-NPOP = 1000000
-UPDATE_GEN_NB = 100
+NPOP = 10000
+UPDATE_GEN_NB = 10
 NDATA = 1
 NDIM = 5
 
