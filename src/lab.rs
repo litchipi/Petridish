@@ -10,7 +10,7 @@ use std::str::FromStr;
 use std::time::SystemTime;
 use strum::IntoEnumIterator;
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct LabConfig {
     pub npop: usize,
     pub elite_ratio: f64,
@@ -34,9 +34,8 @@ impl LabConfig {
         }
     }
 
-    pub fn from_json(_js: JsonData) -> Result<LabConfig, Errcode> {
-        //TODO  Implement LabConfig from JsonData
-        Ok(LabConfig::default())
+    pub fn from_json(jsdata: JsonData) -> Result<LabConfig, Errcode> {
+        Ok(serde_json::from_str(&jsdata)?)
     }
 
     pub fn to_json(&self) -> Result<JsonData, serde_json::Error> {
@@ -52,7 +51,7 @@ pub struct Lab<T: Cell> {
     bestgens: Vec<Genome>,
     cells: Vec<Vec<T>>,
 
-    out_algo: Option<AlgoID>, //Algo from which getting the result
+    pub out_algo: Option<AlgoID>, //Algo from which getting the result
     config: LabConfig,
     init_done: bool,
     algo_configs_set: bool,
@@ -76,6 +75,16 @@ impl<T: 'static + Cell> Lab<T> {
             algo_configs_set: false,
             mean_calc: MeanCompute::new(),
         }
+    }
+
+    pub fn apply_map_with_algo<A: 'static + Algo<CellType = T>>(
+        &mut self, map: Vec<AlgoConfiguration>) -> Result<(), Errcode>{
+
+        assert!(self.algos.is_empty());
+        for _ in 0..map.len(){
+            self.register_new_algo(Box::new(A::new()))?;
+        }
+        self.apply_map(map)
     }
 
     pub fn apply_map(&mut self, map: Vec<AlgoConfiguration>) -> Result<(), Errcode> {
@@ -168,6 +177,7 @@ impl<T: 'static + Cell> Lab<T> {
         ngeneration: usize,
         datasets: &mut Vec<Box<dyn DatasetHandler>>,
     ) -> Result<CellData, Errcode> {
+
         self.__validate_configuration()?;
         self.__init_lab()?;
         let mut top_cell: Option<CellData> = Option::None;
@@ -267,6 +277,8 @@ impl<T: 'static + Cell> Lab<T> {
         id: AlgoID,
         results: &mut Vec<AlgoResult>,
     ) -> Result<(), Errcode> {
+
+        //TODO  Optimize for much faster results propagation
         for togive in self.configs.get(id).unwrap().give.iter() {
             self.__check_id_exist(*togive)?;
             let top_cells = results.get(id).unwrap().clone_top_cells();
@@ -281,6 +293,7 @@ impl<T: 'static + Cell> Lab<T> {
 
     fn __prepare_next_gen(&mut self, id: AlgoID, res: &AlgoResult) -> Result<(), Errcode> {
         let mut genomes = vec![];
+        //TODO  IMPORTANT   Use AlgoConfiguration.impr_genes for genome manipulation
         self.get_method_from_algo(id)?.process_results(
             &res.get_elites(),
             &res.cells_data,

@@ -1,6 +1,6 @@
 use std::any::type_name;
 
-use crate::algo::{AlgoConfiguration, AlgoID, AlgoResult};
+use crate::algo::{AlgoConfiguration, AlgoID, AlgoResult, Algo};
 use crate::cell::{Cell, CellData, Genome};
 use crate::dataset::DatasetHandler;
 use crate::errors::Errcode;

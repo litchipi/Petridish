@@ -130,12 +130,7 @@ impl AlgoResult {
         for i in 0..self.nelite {
             res.push(self.cells_data.get(i).unwrap());
         }
-        res.extend(
-            self.exterior_elites
-                .iter()
-                .map(|e| e)
-                .collect::<Vec<&CellData>>(),
-        );
+        res.extend(self.exterior_elites.iter());
         res
     }
 
