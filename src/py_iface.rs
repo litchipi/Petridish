@@ -40,29 +40,16 @@ macro_rules! generate_py_ifaces {
                 impl [<Lab $name PyIface>]{
 
                     pub fn start(&mut self, ngen: usize) -> (Vec<f64>, f64){
-                        let ret = self.genalgo.start(ngen);
-                        match ret{
-                            Err(e) => {
-                                println!("Error: {}", e);
-                                return (vec![], 0.0);
-                            },
-                            Ok(c) => {
-                                return (c.genome, c.score);
-                            }
-                        }
+                        let c = py_err_if_fail!(self.genalgo.start(ngen));
+                        (c.genome, c.score)
                     }
 
                     pub fn get_special_data(&mut self, id: AlgoID, data: JsonData) -> JsonData{
-                        match self.genalgo.send_special_data(id, data){
-                            Ok(d) => d,
-                            Err(e) => {println!("{}", e); "".to_string()},
-                        }
+                        py_err_if_fail!(self.genalgo.send_special_data(id, data))
                     }
 
                     pub fn push_special_data(&mut self, id: AlgoID, data: JsonData){
-                        if let Err(e) = self.genalgo.recv_special_data(id, data){
-                            println!("{}", e);
-                        }
+                        py_err_if_fail!(self.genalgo.recv_special_data(id, data));
                     }
 
                     pub fn register_empty_dataset(&mut self, ndata: usize){
@@ -70,43 +57,35 @@ macro_rules! generate_py_ifaces {
                             Box::new(EmptyDataset::new(ndata))
                             );
                     }
-
-                    pub fn apply_map(&mut self, map: JsonData){
-                        $(
-                            println!("{} => {}", stringify!($algoname), stringify!($algotype));
-                        )*
-                        if let Err(e) = self.genalgo.apply_json_map(map){
-                            println!("{}", e);
-                        }
+                    
+                    pub fn set_output_algorithm(&mut self, ind: AlgoID){
+                        self.genalgo.set_output_algorithm(ind);
                     }
 
+                    pub fn apply_map(&mut self, map: JsonData){
+                        py_err_if_fail!(self.genalgo.apply_json_map(map));
+                    }
+
+
                     $(
-                        pub fn [<register_algo_ $algoname>](&mut self) -> i32{
-                            match self.genalgo.lab.register_new_algo(
+
+                        pub fn [<apply_map_with_algo_ $algoname>](&mut self, map: JsonData){
+                            py_err_if_fail!(self.genalgo
+                                .apply_map_with_algo::<$algotype>(map));
+                        }
+
+                        pub fn [<register_algo_ $algoname>](&mut self) -> usize{
+                            py_err_if_fail!(self.genalgo.lab.register_new_algo(
                                 Box::new(<$algotype as Algo>::new())
-                                ){
-                                Err(e) => {
-                                    println!("Error: {}", e);
-                                    return -1;
-                                },
-                                Ok(ind) => ind as i32,
-                            }
+                                ))
                         }
                     )*
 
                     pub fn configure_algo(&mut self, ind: usize, conf: JsonData){
                         println!("Configuring algorithm {}: {}", ind, conf);
-                        if let Err(e) = self.genalgo.lab.configure_algo(ind,
-                            match AlgoConfiguration::from_json(conf){
-                                Ok(j) => j,
-                                Err(e) => {
-                                    println!("Error: {}", e);
-                                    return;
-                                },
-                            }
-                        ){
-                            println!("Error: {}", e);
-                        }
+                        py_err_if_fail!(self.genalgo.lab.configure_algo(ind,
+                            py_err_if_fail!(AlgoConfiguration::from_json(conf))
+                        ));
                     }
                 }
 
@@ -123,56 +102,18 @@ macro_rules! generate_py_ifaces {
 
         #[pyfunction]
         pub fn get_lab_default() -> JsonData{
-            match LabConfig::default().to_json(){
-                Ok(d) => d,
-                Err(e) => {println!("Error: {}", e); //TODO  Python Exception
-                    return "".to_string(); }
-            }
+            py_err_if_fail!(LabConfig::default().to_json())
         }
 
         #[pyfunction]
         pub fn get_algo_default() -> JsonData{
-            match AlgoConfiguration::default().to_json(){
-                Ok(d) => d,
-                Err(e) => {println!("Error: {}", e);
-                    return "".to_string(); }
-            }
+            py_err_if_fail!(AlgoConfiguration::default().to_json())
         }
 
         #[pyfunction]
-        pub fn create_labmap_assistant(
-            mapformat_str: String,
-            isomethod_str: String,
-            mixmethod_str: String,
-            bundlemethod_str: String,
-            finalmethod_str: String,
-        ) -> LabMapAssistant {
-            let isomethod = py_err_if_none!(
-                GenalgoMethodsAvailable::get_by_name(isomethod_str),
-                "Wrong iso method"
-            );
-            let mixmethod = py_err_if_none!(
-                GenalgoMethodsAvailable::get_by_name(mixmethod_str),
-                "Wrong mix method"
-            );
-            let bundlemethod = py_err_if_none!(
-                GenalgoMethodsAvailable::get_by_name(bundlemethod_str),
-                "Wrong bundle method"
-            );
-            let finalmethod = py_err_if_none!(
-                GenalgoMethodsAvailable::get_by_name(finalmethod_str),
-                "Wrong final method"
-            );
-
-            LabMapAssistant::new(
-                mapformat_str,
-                isomethod,
-                mixmethod,
-                bundlemethod,
-                finalmethod,
-            )
+        pub fn create_labmap_assistant(mapformat: String) -> LabMapAssistant {
+            LabMapAssistant::new(mapformat)
         }
-        //TODO  Function raise Python error
 
         #[pymodule]
         fn genalgo(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -192,7 +133,7 @@ macro_rules! generate_py_ifaces {
 #[macro_export]
 macro_rules! raise_python_error{
     [$msg:expr] => {
-        panic!($msg)
+        panic!($msg)    //TODO raise_python_error!
     }
 }
 
@@ -203,5 +144,21 @@ macro_rules! py_err_if_none{
             Some(data) => data,
             None => raise_python_error!($msg),
         }
-    }
+    };
+}
+
+#[macro_export]
+macro_rules! py_err_if_fail{
+    [$x:expr, $msg:expr] => {
+        match $x{
+            Ok(data) => data,
+            Err(e) => raise_python_error!(format!("{}: \"{}\"", $msg, e)),
+        }
+    };
+    [$x:expr] => {
+        match $x{
+            Ok(data) => data,
+            Err(e) => raise_python_error!(format!("Error: \"{}\"", e)),
+        }
+    };
 }

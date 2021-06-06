@@ -1,12 +1,11 @@
 use crate::algo::{AlgoConfiguration, AlgoPopulation};
 use crate::errors::Errcode;
-use crate::genalgomethods::{GenalgoMethodsAvailable, GenalgoMethodsConfigurations};
-use crate::utils::{format_error, JsonData};
+use crate::genalgomethods::GenalgoMethodsConfigurations;
+use crate::utils::JsonData;
 use crate::*;
 
 use enum_dispatch::enum_dispatch;
 use pyo3::prelude::*;
-use serde_json::json;
 mod wheel;
 use wheel::WheelFormat;
 
@@ -33,6 +32,7 @@ impl LabMapFormatType {
     }
 }
 
+#[pyclass]
 pub struct LabMapAssistant {
     random_opti: AlgoConfiguration,
     iso_algos: Vec<AlgoConfiguration>,
@@ -42,8 +42,10 @@ pub struct LabMapAssistant {
     mapformat: LabMapFormatType,
 }
 
+#[pymethods]
 impl LabMapAssistant {
-    pub fn new(format_str: String, final_method: String) -> LabMapAssistant {
+    #[staticmethod]
+    pub fn new(format_str: String) -> LabMapAssistant {
         LabMapAssistant {
             random_opti: get_random_opti_algoconf(),
             iso_algos: vec![],
@@ -55,22 +57,22 @@ impl LabMapAssistant {
     }
 
     pub fn add_opti_part(&mut self, id: String, genes_opt: Vec<usize>, priority: f64,
-        method: String, method_cfg: JsonData) -> Result<(), Errcode>{
+        method: String, method_cfg: JsonData){
         self.iso_algos.push(AlgoConfiguration { 
             id, method,
-            method,
-            method_options: GenalgoMethodsConfigurations::from_str(method_cfg)?,
+            method_options: py_err_if_fail!(
+                GenalgoMethodsConfigurations::from_str(method_cfg),
+                "GenalgoMethodsConfigurations load failed"),
             give: vec![],
             impr_genes: Some(genes_opt),
-            population: AlgoPopulation::WeightofTot(priority+self.priorities[1])
+            population: AlgoPopulation::WeightofTot(priority*self.priorities[1])
         });
-        Ok(())
     }
 
-    pub fn generate_map(&self, mix_method: String) -> Result<JsonData, Errcode>{
+    pub fn generate_map(&self, mix_method: String) -> JsonData{
         // AlgosID:     <Random opti> <Final tail> <Map>
-        self.mapformat.generate_map(&self.iso_algos, &self.random_opti,
-            &self.final_tail, &self.priorities, mix_method)
+        py_err_if_fail!(self.mapformat.generate_map(&self.iso_algos, &self.random_opti,
+            &self.final_tail, &self.priorities, mix_method), "Map generation failed")
     }
 }
 
